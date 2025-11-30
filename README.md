@@ -97,7 +97,7 @@ This step is **required** so YOLO and yt-dlp can save downloaded files.
 # Termux
 pkg update && pkg upgrade -y
 pkg update
-pkg install git
+pkg install -y git
 
 # Ubuntu / Debian
 sudo apt update

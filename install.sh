@@ -66,6 +66,7 @@ else
     install_msg "Installing Python"
     if [[ "$ENV" == "termux" ]]; then
         pkg install -y python
+        pkg install -y python-pip
     else
         sudo apt install -y python3 python3-pip
     fi
@@ -76,7 +77,11 @@ if command_exists pip || command_exists pip3; then
     skip_msg "pip"
 else
     install_msg "Installing pip"
-    python3 -m ensurepip --upgrade
+    if [[ "$ENV" == "termux" ]]; then
+        pkg install -y python-pip
+    else
+        python3 -m ensurepip --upgrade
+    fi
 fi
 
 # FFmpeg
@@ -112,8 +117,14 @@ install_msg "Installing Python dependencies"
 
 cd "$PROJECT_ROOT"
 
-python3 -m pip install --upgrade pip
-python3 -m pip install -r requirements.txt
+if [[ "$ENV" == "termux" ]]; then
+    # Termux: do not upgrade pip
+    python3 -m pip install -r requirements.txt
+else
+    # Linux
+    python3 -m pip install --upgrade pip
+    python3 -m pip install -r requirements.txt
+fi
 
 echo
 
