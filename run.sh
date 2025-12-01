@@ -23,7 +23,7 @@ else
 fi
 
 # Clear terminal screen
-# clear
+clear
 
 # Run YOLO as a module
 exec "$PY" -m yolo.main "$@"

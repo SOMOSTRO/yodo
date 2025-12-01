@@ -13,9 +13,9 @@ def _version_json_data():
 
 def get_version():
   """Return YOLO version from version.json"""
-  return _version_json_data.get("version", "unknown")
+  return _version_json_data().get("version", "unknown")
 
 
 def get_channel():
   """Return release channel from version.json"""
-  return _version_json_data.get("channel", "unknown")
+  return _version_json_data().get("channel", "unknown")
