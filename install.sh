@@ -162,7 +162,7 @@ echo
 install_msg "Setting executable permissions"
 
 chmod +x run.sh
-chmod +x updater/*.sh
+chmod +x yolo/updater/*.sh
 
 echo
 
