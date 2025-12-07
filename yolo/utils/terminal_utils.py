@@ -12,3 +12,7 @@ def get_terminal_width():
   
 def print_crossline(char='—'):
   return char * terminal_width
+  
+def print_title(title, divider="—"):
+  """print title in center with a divider"""
+  print(f" {title} ".center(terminal_width, divider))

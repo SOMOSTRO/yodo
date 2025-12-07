@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+# import re
 # import shlex
 # import importlib
 # from threading import Thread
@@ -27,6 +28,7 @@ is_info_loaded = False
 
 # Global var for final filename
 FINAL_FILENAME = None
+FINAL_TITLE = None # filename without ext
 FINAL_EXT = None
 
 # function to print program banner/logo
@@ -34,7 +36,7 @@ def PRINT_LOGO():
   """Print YOLO banner"""
   
   # YOLO version
-  version = "1.1.3"
+  version = "1.1.4"
   
   _1 = f'\033[38;2;204;153;153m' # Magenta
   _2 = f'\033[38;2;204;153;204m' # Lilac
@@ -100,9 +102,49 @@ def display_fetch_loader():
       dots = 0
   print(f"{'\b'*dots + ' '*dots + '\b'*dots}{CLR_RESET}", end='\t', flush=True)
   
-def format_filename(file_name):
-  return file_name.rsplit('/', 1)[1]
+def format_filename(filename):
+  """Extracts and returns the file name from a full file path."""
+  return filename.rsplit('/', 1)[1]
+  
+def sanitize_filename(title, max_length=150):
+  """
+  """
+  
+  # Normalize unicode (keep text, but fixes weird encoding forms)
+  title = unicodedata.normalize("NFKC", title)
+  
+  # Remove emojis
+  emoji_pattern = re.compile(
+    "["
+    "\U0001F600-\U0001F64F"  # emoticons
+    "\U0001F300-\U0001F5FF"  # symbols & pictographs
+    "\U0001F680-\U0001F6FF"  # transport & map
+    "\U0001F700-\U0001F77F"
+    "\U0001F780-\U0001F7FF"
+    "\U0001F800-\U0001F8FF"
+    "\U0001F900-\U0001F9FF"
+    "\U0001FA00-\U0001FAFF"
+    "]+",
+    flags=re.UNICODE
+  )
+  title = emoji_pattern.sub("", title)
+  
+  # Replace unsafe filename characters
+  unsafe_chars = r'[\/:*?"<>|#]'
+  title = re.sub(unsafe_chars, "_", title)
+  
+  # Collapse multiple spaces into one
+  title = re.sub(r'\s+', ' ', title).strip()
 
+  # Enforce max filename length
+  if len(title) > max_length:
+    title = title[:max_length].rstrip()
+    
+  # Using yt_dlp sanitize_filename function
+  title = _ytdlp_sanitize(title)
+  
+  # return sanitized file name
+  return title
 
 # initialisation function.
 def init():
@@ -123,7 +165,9 @@ def init():
   
   # lazy preloading (background module preloading) logic
   modules_to_preload = (
+    "re",
     "shlex",
+    "unicodedata",
     "urllib.parse",
     "yt_dlp",
     "yt_dlp.utils",
@@ -207,10 +251,10 @@ def url_input_handler():
   print(f"{CLR_BRIGHT_GREEN}YOLO — Universal Media Downloader{CLR_RESET}")
   print(f"{CLR_BRIGHT_GREEN}Github: https://github.com/somostro/yolo{CLR_RESET}\n")
   
-  print(f"Download videos and audio from supported websites using a simple, interactive interface.\n")
+  print(f"{CLR_ITALIC}Download videos and audio from supported websites using a simple, interactive interface.\n{CLR_RESET}")
   
   print(f"{CLR_GREEN}How to use:{CLR_RESET}")
-  print(f"  • Paste a media URL and press Enter to choose quality and download")
+  print(f"{CLR_BOLD}  • Paste a media URL and press Enter to choose quality and download{CLR_RESET}")
   print(f"  • Type '{CLR_CYAN}update{CLR_RESET}' to update YOLO and yt-dlp to the latest version")
   print(f"  • Type '{CLR_CYAN}cancel{CLR_RESET}' to exit the program at any time\n")
   
@@ -503,11 +547,13 @@ def choice_input_handler(options_file_size, options_details):
         ext = "mp4" # default video format
       elif ext == "best":
         ext = options_details[choice]['video']['video Extension']
-      
+    
+    global FINAL_TITLE
     global FINAL_EXT
     FINAL_EXT = ext
     global FINAL_FILENAME
-    FINAL_FILENAME = normalise_name(FINAL_FILENAME)
+    FINAL_TITLE = normalise_name(FINAL_FILENAME)
+    FINAL_FILENAME = FINAL_TITLE
     FINAL_FILENAME = f"{FINAL_FILENAME}.{ext}"
     if DEBUG:
       print(f"{CLR_DIM}FINAL_FILENAME:  {FINAL_FILENAME}{CLR_RESET}")
@@ -1117,9 +1163,10 @@ def download_media(url, download_dir="/storage/emulated/0/YOLO"):
     os.makedirs(download_dir, exist_ok=True)
   
   # general yt-dlp opts
+  global FINAL_TITLE
   YDL_OPTS = {
     "format": options[choice],
-    "outtmpl": os.path.join(download_dir, f"%(title)s.%(ext)s"),  # Download path
+    "outtmpl": os.path.join(download_dir, f"{FINAL_TITLE}.%(ext)s"),  # Download path
     "noplaylist": True,  # Download only single item, not whole playlist
     "overwrites": False,
     "concurrent_fragment_downloads": 3, # number of fragments of a video that are downloaded simultaneously
@@ -1229,12 +1276,14 @@ if __name__ == "__main__":
   preload_modules_thread.join()
   
   # general modules
-  from urllib.parse import urlparse
+  import re
   import shlex
+  import unicodedata
+  from urllib.parse import urlparse
   
   # ytd-dlp imports
   from yt_dlp import YoutubeDL
-  from yt_dlp.utils import sanitize_filename
+  from yt_dlp.utils import sanitize_filename as _ytdlp_sanitize
   
   # YOLO built-in modules/functions
   from yolo.utils.yolo_documentation import *

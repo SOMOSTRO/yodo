@@ -2,7 +2,7 @@ import subprocess
 import sys
 import shlex
 from yolo.utils.colors import *
-from yolo.utils.terminal_utils import print_crossline
+from yolo.utils.terminal_utils import print_title, print_crossline
 from yolo.utils.version import get_version, get_channel
 
 YOLO_SCRIPT = "yolo/updater/update_yolo.sh"
@@ -48,7 +48,7 @@ def update(command: str):
 
   # update YOLO
   if update_yolo:
-    print(print_crossline())
+    print_title(f"{CLR_BRIGHT_GREEN}YOLO{CLR_RESET}")
     print(f"Current YOLO version: {CLR_YELLOW}{get_version()} ({get_channel()}){CLR_RESET}")
     print(f"{CLR_BRIGHT_GREEN}• Updating YOLO...{CLR_RESET}")
     
@@ -59,14 +59,15 @@ def update(command: str):
 
   # update yt-dlp
   if update_ytdlp:
-    print(print_crossline())
+    print_title(f"{CLR_BRIGHT_GREEN}YT-DLP{CLR_RESET}")
     print(f"{CLR_BRIGHT_GREEN}• Updating yt-dlp ({'nightly' if nightly else 'stable'})...{CLR_RESET}")
     args = ["--nightly"] if nightly else []
     _run_script(YTDLP_SCRIPT, args)
     print(print_crossline())
 
-  print(f"\n{CLR_BRIGHT_GREEN}✓ Update process finished.{CLR_RESET}")
+  print(f"\n{CLR_BRIGHT_GREEN}Update process finished.{CLR_RESET}")
   print("Exiting...")
+  print(f"\n({CLR_BRIGHT_GREEN}Type {CLR_BOLD}yolo{CLR_RESET_BOLD} again to enjoy the new version...{CLR_RESET})")
   sys.exit()
 
 
