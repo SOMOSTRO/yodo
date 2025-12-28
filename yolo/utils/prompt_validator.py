@@ -5,17 +5,18 @@ from prompt_toolkit.validation import Validator, ValidationError
 from prompt_toolkit.styles import Style
 
 # video attributes or arguments
-_video_quality_attrs = ['quality=144p', 'quality=240p', 'quality=360p', 'quality=480p', 'quality=720p', 'quality=1080p', 'quality=2K', 'quality=4K', 'quality=8K']
-_video_format_attrs = ['format=best', 'format=mp4', 'format=mkv', 'format=webm']
-_video_subtitles_attrs = ['subtitles=true', 'subtitles=false', 'subtitles=all', 'subtitles=en', 'subtitles=hi', 'subtitles=ml']
+_video_quality_attrs = ['quality=144p', 'quality=240p', 'quality=360p', 'quality=480p', 'quality=720p', 'quality=1080p', 'quality=2K', 'quality=4K', 'quality=8K', 'quality=help']
+_video_format_attrs = ['format=best', 'format=mp4', 'format=mkv', 'format=webm', 'format=help']
+_video_subtitles_attrs = ['subtitles=true', 'subtitles=false', 'subtitles=all', 'subtitles=en', 'subtitles=hi', 'subtitles=ml', 'subtitles=help']
 
 # audio attributes or arguments
-_audio_quality_attrs = ['quality=high', 'quality=medium', 'quality=low']
-_audio_format_attrs = ['format=best', 'format=opus', 'format=mp3', 'format=aac', 'format=flac', 'format=wav', 'format=vorbis']
+_audio_quality_attrs = ['quality=high', 'quality=medium', 'quality=low', 'quality=help']
+_audio_format_attrs = ['format=best', 'format=opus', 'format=mp3', 'format=aac', 'format=flac', 'format=wav', 'format=vorbis', 'format=help']
 
 # general video and audio attrs
-_metadata_attrs = ['metadata=true', 'metadata=false']
-_thumbnail_attrs = ['thumbnail=true', 'thumbnail=false', 'thumbnail=jpg', 'thumbnail=png', 'thumbnail=webp']
+_metadata_attrs = ['metadata=true', 'metadata=false', 'metadata=help']
+_thumbnail_attrs = ['thumbnail=true', 'thumbnail=false', 'thumbnail=jpg', 'thumbnail=png', 'thumbnail=webp', 'thumbnail=help']
+_help_attr = "help"
 
 # placeholders that displayed on input screen
 placeholder_words = {
@@ -27,14 +28,16 @@ placeholder_words = {
     *_video_format_attrs,
     *_metadata_attrs,
     *_thumbnail_attrs,
-    *_video_subtitles_attrs
+    *_video_subtitles_attrs,
+    _help_attr
     ],
   # audio attributes or arguments
   "audio": [
     *_audio_quality_attrs,
     *_audio_format_attrs,
     *_metadata_attrs,
-    *_thumbnail_attrs
+    *_thumbnail_attrs,
+    _help_attr
     ]
 }
 
@@ -77,12 +80,12 @@ style = Style.from_dict({
 class OptionsValidator(Validator):
   def emptyInputError(self, text):
     raise ValidationError(
-        message = "Please choose either option from (low, medium, high, audio). Enter 'cancel' to cancel the operation.",
+        message = "Enter a choice: low, medium, high or audio",
         cursor_position = len(text)+1
       )
   def invalidChoiceError(self, text):
     raise ValidationError(
-        message = "invalid choice, enter 'cancel' to cancel the operation.",
+        message = "invalid choice. Try low, medium, high or audio",
         cursor_position = len(text)+1 # highlights whole word, set cursor position to the end
       )
   def validate(self, document):

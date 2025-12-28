@@ -5,8 +5,13 @@
 # Resolve script's real location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-CLR_RED='\033[91m'
-CLR_RESET='\033[0m'
+if [ -t 1 ]; then
+    CLR_RED=$'\033[91m'
+    CLR_RESET=$'\033[0m'
+else
+    CLR_RED=''
+    CLR_RESET=''
+fi
 
 # Change to project root
 cd "$SCRIPT_DIR" || {

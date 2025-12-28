@@ -37,7 +37,7 @@ def PRINT_LOGO():
   """Print YOLO banner"""
   
   # YOLO version
-  version = "1.1.6"
+  version = "1.1.7"
   
   _1 = f'\033[38;2;204;153;153m' # Magenta
   _2 = f'\033[38;2;204;153;204m' # Lilac
@@ -541,7 +541,7 @@ def choice_input_handler(options_file_size, options_details):
       "quality": "bestaudio",
       "format": "best", # default best
       "thumbnail": {"enabled": True, "ext": 'jpg'}, # default True, jpg
-      "metadata": True # default True for all acodec except 'opus'
+      "metadata": True # default True for supported formats
     }
   }
   
@@ -643,6 +643,24 @@ def choice_input_handler(options_file_size, options_details):
   {choice_description['audio']}
   """)
 
+  
+  # Check available choices
+  _available_choices = []
+  for _choice in ('low', 'medium', 'high', 'audio'):
+    if details_formated[_choice]['audio']:
+      _available_choices.append(_choice)
+
+  # Guide user to select a available choice and optional arguments/attributes
+  print(f"""{CLR_BRIGHT_GREEN}How to choose:{CLR_RESET}
+  • Type one option: {CLR_CYAN}{', '.join(_available_choices)}{CLR_RESET}
+  • Optionally add arguments using {CLR_CYAN}<key>=<value>{CLR_RESET}
+  • Examples:{CLR_CYAN}
+      high
+      audio quality=low format=mp3
+  {CLR_RESET}""")
+  
+  print(f"Type '{CLR_CYAN}<choice> help{CLR_RESET}' to see available arguments.")
+  print(f"Type '{CLR_CYAN}cancel{CLR_RESET}' to cancel.\n")
 
   
   # function to handle and validate user input and its attribute values
@@ -671,7 +689,9 @@ def choice_input_handler(options_file_size, options_details):
         return QUALITY_LABELS_MAP[value]
       elif value.isdigit():
         return f"bestaudio[abr<={int(value)}]/bestaudio"
-      raise ValueError(f"Invalid value (quality: '{value}').{AUDIO_QUALITY_DESCRIPTION}")
+      elif value == 'help':
+        raise ValueError(AUDIO_QUALITY_DESCRIPTION)
+      raise ValueError(f"Invalid value (quality: '{value}').\n{AUDIO_QUALITY_DESCRIPTION}")
     
     def validate_video_quality(value, choice):
       value = value.strip().lower()
@@ -701,7 +721,9 @@ def choice_input_handler(options_file_size, options_details):
         "8": "7680"
       }
       
-      if value.endswith('p'):
+      if value == 'help':
+        raise ValueError(VIDEO_QUALITY_DESCRIPTION)
+      elif value.endswith('p'):
         value = value[:-1]
         if value in ALLOWED_VPIXEL_QUALITY:
           return f"bestvideo[height<={value}]+{QUALITY_FORMAT[choice]["audio"]}/{QUALITY_FORMAT[choice]["video"]}"
@@ -709,7 +731,8 @@ def choice_input_handler(options_file_size, options_details):
         value = value[:-1]
         if value in ALLOWED_HPIXEL_QUALITY:
           return f"bestvideo[width<={ALLOWED_HPIXEL_QUALITY[value]}]+{QUALITY_FORMAT[choice]["audio"]}/{QUALITY_FORMAT[choice]["video"]}"
-      raise ValueError(f"Invalid value (quality: '{value}').{VIDEO_QUALITY_DESCRIPTION}")
+      
+      raise ValueError(f"Invalid value (quality: '{value}').\n{VIDEO_QUALITY_DESCRIPTION}")
     
     def validate_audio_format(value, choice):
       value = value.strip().lower()
@@ -718,14 +741,16 @@ def choice_input_handler(options_file_size, options_details):
       if value in ALLOWED_FORMATS:
         set_FINAL_FILENAME(choice, value)
         # set metadata=false for unsupported formats
-        if value in ('opus', 'wav'):
+        if value in ('wav'):
           options_attributes["audio"]["metadata"] = False
         # set metadata=true for supported formats
         else:
           options_attributes["audio"]["metadata"] = True
         return value
+      elif value == 'help':
+        raise ValueError(AVAILABLE_AUDIO_FORMATS_DESCRIPTION)
       
-      raise ValueError(f"Invalid value (format: '{value}').{AVAILABLE_AUDIO_FORMATS_DESCRIPTION}")
+      raise ValueError(f"Invalid value (format: '{value}').\n{AVAILABLE_AUDIO_FORMATS_DESCRIPTION}")
     
     def validate_video_format(value, choice):
       value = value.strip().lower()
@@ -752,8 +777,10 @@ def choice_input_handler(options_file_size, options_details):
           options_attributes["video"]["subtitles"]["subtitlesformat"] = "ttxt"
         
         return value
+      elif value == 'help':
+        raise ValueError(AVAILABLE_VIDEO_FORMATS_DESCRIPTION)
       
-      raise ValueError(f"Invalid value (format: '{value}').{AVAILABLE_VIDEO_FORMATS_DESCRIPTION}")
+      raise ValueError(f"Invalid value (format: '{value}').\n{AVAILABLE_VIDEO_FORMATS_DESCRIPTION}")
       
     def validate_thumbnail(value, key):
       value = value.strip().lstrip(".").lower()
@@ -768,7 +795,9 @@ def choice_input_handler(options_file_size, options_details):
       ALLOWED_THUMB_EXT = {"png", "jpg", "webp"}
       ext = value
       if ext not in ALLOWED_THUMB_EXT:
-        raise ValueError(f"Invalid thumbnail image format (extension: '{ext}').{AUDIO_THUMB_DESCRIPTION if key == 'audio' else VIDEO_THUMB_DESCRIPTION}")
+        if value == 'help':
+          raise ValueError(AUDIO_THUMB_DESCRIPTION if key == 'audio' else VIDEO_THUMB_DESCRIPTION)
+        raise ValueError(f"Invalid thumbnail image format (extension: '{ext}').\n{AUDIO_THUMB_DESCRIPTION if key == 'audio' else VIDEO_THUMB_DESCRIPTION}")
       # normalise ext
       if ext == "jpeg": ext = "jpg"
       return True, ext
@@ -779,7 +808,10 @@ def choice_input_handler(options_file_size, options_details):
         return True
       if value in ('false', '0', 'no', 'n'):
         return False
-      raise ValueError(f"Invalid value (metadata: '{value}').{AUDIO_METADATA_DESCRIPTION if key == 'audio' else VIDEO_METADATA_DESCRIPTION}")
+      
+      if value == 'help':
+        raise ValueError(AUDIO_METADATA_DESCRIPTION if key == 'audio' else VIDEO_METADATA_DESCRIPTION)
+      raise ValueError(f"Invalid value (metadata: '{value}').\n{AUDIO_METADATA_DESCRIPTION if key == 'audio' else VIDEO_METADATA_DESCRIPTION}")
     
     def validate_subtitles(value):
       value = value.strip().lower()
@@ -794,13 +826,15 @@ def choice_input_handler(options_file_size, options_details):
       lang = value
       if lang in ALLOWED_LANGS:
         return True, lang
-      raise ValueError(f"Invalid value(subtitles: '{lang}').{SUBTITLES_DESCRIPTION}")
+      elif value == 'help':
+        raise ValueError(SUBTITLES_DESCRIPTION)
+      raise ValueError(f"Invalid value(subtitles: '{lang}').\n{SUBTITLES_DESCRIPTION}")
     
     # By default set audio format as best
     options_attributes["audio"]["format"] = codec_to_ext(options_details[user_input.split(" ", 1)[0]]['audio']['Audio codec'])
     
     # set metadata=false for unsupported audio formats (default)
-    if FINAL_EXT in ('opus', 'wav'):
+    if FINAL_EXT in ('wav'):
       options_attributes["audio"]["metadata"] = False
     
     # set thumbnail=false for unsupported formats (default)
@@ -818,9 +852,6 @@ def choice_input_handler(options_file_size, options_details):
     
     # if no attributes provided return the function
     if len(user_input_list) == 1:
-      if user_input_list[0] == "audio":
-        if FINAL_EXT == "opus":
-          options_attributes["audio"]["metadata"] = False
       return True, None
     
     choice = user_input_list[0]
@@ -836,9 +867,12 @@ def choice_input_handler(options_file_size, options_details):
         key = key.strip().lower()
         value = value.strip().lower()
         
+        # Display documentation of availabile attributes 
+        if key == 'help':
+          return False, ATTRS_HELP_DESCRIPTION
         # check if the key is valid
-        if key not in ALLOWED_AUDIO_ATTRS:
-          return False, f"Unknown attribute '{attr}'. Allowed {ALLOWED_AUDIO_ATTRS}"
+        elif key not in ALLOWED_AUDIO_ATTRS:
+          return False, f"Unknown attribute '{attr}'.\n{ATTRS_HELP_DESCRIPTION}"
         
         if sep:
           if attr.startswith('quality'):
@@ -866,7 +900,7 @@ def choice_input_handler(options_file_size, options_details):
               return False, e
             
             if is_enabled:
-              if FINAL_EXT in ('opus', 'aac', 'wav'):
+              if FINAL_EXT in ('aac', 'wav'):
                 print(f"{CLR_WARNING}\nWarning: The audio format '{FINAL_EXT}' has limited or no metadata support.\nEnabling metadata for unsupported formats will not stop the download, but the tags may be missing in the final file. {CLR_RESET}")
               options_attributes["audio"]["metadata"] = True
             else:
@@ -879,9 +913,11 @@ def choice_input_handler(options_file_size, options_details):
         key = key.strip().lower()
         value = value.strip().lower()
         
+        if key == 'help':
+          return False, ATTRS_HELP_DESCRIPTION
         # check if the key is valid
         if key not in ALLOWED_VIDEO_ATTRS:
-          return False, f"Unknown attribute '{attr}'. Allowed {ALLOWED_VIDEO_ATTRS}"
+          return False, f"Unknown attribute '{attr}'.\n {ATTRS_HELP_DESCRIPTION}"
         
         if sep:
           if attr.startswith('quality'):
@@ -966,10 +1002,10 @@ def choice_input_handler(options_file_size, options_details):
           print(f"{p_s(2)}{CLR_ORANGE}Thumbnail: {CLR_RESET}{'Enabled' if options_attributes[opt]['thumbnail']['enabled'] else 'Disabled'}{(', '+CLR_ORANGE+'Extension: '+CLR_RESET+options_attributes[opt]['thumbnail']['ext']) if options_attributes[opt]['thumbnail']['enabled'] else ''}")
           print(f"{p_s(2)}{CLR_ORANGE}Metadata: {CLR_RESET}{'Enabled' if options_attributes[opt]['metadata'] else 'Disabled'}")
         if choice == "audio":
-          print(f"{CLR_BRIGHT_GREEN}Audio attributes details:{CLR_RESET}")
+          print(f"{CLR_BRIGHT_GREEN}Audio arguments details:{CLR_RESET}")
           print_attr_details("audio")
         else:
-          print(f"{CLR_BRIGHT_GREEN}Video attributes details:{CLR_RESET}")
+          print(f"{CLR_BRIGHT_GREEN}Video arguments details:{CLR_RESET}")
           print_attr_details("video")
           print(f"{p_s(2)}{CLR_ORANGE}Subtitles: {CLR_RESET}{'Enabled' if options_attributes['video']['subtitles']['enabled'] else 'Disabled'}{(', '+CLR_ORANGE+'Subtitles format: '+CLR_RESET+options_attributes['video']['subtitles']['subtitlesformat']) if options_attributes['video']['subtitles']['enabled'] else ''}")
         break
@@ -1080,14 +1116,14 @@ def download_media(url, download_dir="/storage/emulated/0/YOLO"):
     audio_postprocessors_opts = [
         *key_extract_audio,
         *key_thumbnail_converter,
-        *key_thumbnail,
-        *key_metadata
+        *key_metadata, # Force embedding metadata first
+        *key_thumbnail
       ]
     
     # audio downloader(write thumbnail, add metadata) options
     audio_downloader_opts = {
-      **write_thumbnail,
-      **add_metadata
+      **add_metadata, # Force embedding metadata first
+      **write_thumbnail
     }
     
     # general audio options

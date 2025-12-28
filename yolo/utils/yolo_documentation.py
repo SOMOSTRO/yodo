@@ -1,16 +1,62 @@
 import shutil
 from yolo.utils.colors import *
-from yolo.utils.terminal_utils import print_crossline
+from yolo.utils.terminal_utils import print_crossline, center_title
+
+# ---------------------------------------
+
+
+ATTRS_HELP_DESCRIPTION = f"""{CLR_RESET}{center_title(f'{CLR_BOLD}Arguments Usage Guide{CLR_RESET}', '–')}
+  
+  {CLR_BRIGHT_CYAN}Syntax:   {CLR_CYAN}<choice> <argument>=<value>
+  {CLR_BRIGHT_CYAN}Example:  {CLR_CYAN}high quality=4K{CLR_RESET}
+    
+  {CLR_BRIGHT_GREEN}Available Arguments:{CLR_RESET}
+    • {CLR_BRIGHT_GREEN}quality{CLR_RESET}:
+        Controls audio/video quality.
+        Example:
+          low quality=144p
+        
+    • {CLR_BRIGHT_GREEN}format{CLR_RESET}:
+        Output file format.
+        Examples:
+          medium format=mkv
+          audio format=mp3
+        
+    • {CLR_BRIGHT_GREEN}metadata{CLR_RESET}:
+        Embed media metadata into the file.
+        Example:
+          high metadata=true
+        
+    • {CLR_BRIGHT_GREEN}thumbnail{CLR_RESET}:
+        Embed thumbnail into the file.
+        Example:
+          audio thumbnail=true
+        
+    • {CLR_BRIGHT_GREEN}subtitles{CLR_RESET}:
+        Download and embed subtitles (video only).
+        Example:
+          high subtitles=true
+  
+  {CLR_BOLD}To learn more about a specific argument:{CLR_RESET}
+      {CLR_CYAN}<choice> <argument>=help{CLR_RESET}
+  Examples:
+      {CLR_CYAN}high quality=help
+      audio format=help{CLR_RESET}
+      
+  {CLR_WARNING}Notes:{CLR_RESET}
+    - Arguments are optional.
+    - If an argument is not specified, defaults are used.
+    - {CLR_GREEN}subtitles{CLR_RESET} argument is only available for video options.
+{CLR_RESET}{print_crossline('-')}"""
 
 
 # ---------------------------------------
 
-AUDIO_QUALITY_DESCRIPTION = f"""
-{CLR_RESET}{print_crossline('-')}
-{CLR_RESET}{CLR_BOLD}Audio quality options{CLR_RESET}:
 
-  {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}  quality=[value]
-  {CLR_BRIGHT_CYAN}Example:{CLR_CYAN} quality=high
+AUDIO_QUALITY_DESCRIPTION = f"""{CLR_RESET}{center_title(f'{CLR_BOLD}Audio Quality Options{CLR_RESET}', '–')}
+
+  {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}   quality=[value]
+  {CLR_BRIGHT_CYAN}Example:{CLR_CYAN}  quality=high
 {CLR_RESET}
 • {CLR_BRIGHT_GREEN}high{CLR_RESET} (default)  
   Best available audio (highest bitrate).  
@@ -35,14 +81,12 @@ AUDIO_QUALITY_DESCRIPTION = f"""
 # ---------------------------------------
 
 
-VIDEO_QUALITY_DESCRIPTION = f"""
-{CLR_RESET}{print_crossline('-')}
-{CLR_RESET}{CLR_BOLD}Video quality options{CLR_RESET}:
+VIDEO_QUALITY_DESCRIPTION = f"""{CLR_RESET}{center_title(f'{CLR_BOLD}Video Quality Options{CLR_RESET}', '–')}
 
 {CLR_ITALIC}{CLR_GREEN}Defines the preferred video resolution for downloads. You can specify quality using pixel values (e.g., 720p or 4K).{CLR_RESET}
 
-  {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}  quality=[value]
-  {CLR_BRIGHT_CYAN}Example:{CLR_CYAN} quality=720p
+  {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}   quality=[value]
+  {CLR_BRIGHT_CYAN}Example:{CLR_CYAN}  quality=720p
 {CLR_RESET}
 • {CLR_BRIGHT_GREEN}Standard Resolutions:{CLR_RESET}
   Available values: {CLR_CYAN}144p, 240p, 360p, 480p, 720p, 1080p, 1440p, 2160p{CLR_RESET}
@@ -67,12 +111,10 @@ VIDEO_QUALITY_DESCRIPTION = f"""
 # ---------------------------------------
 
 
-AVAILABLE_AUDIO_FORMATS_DESCRIPTION = f"""
-{CLR_RESET}{print_crossline('-')}
-Audio format options{CLR_RESET}:
+AVAILABLE_AUDIO_FORMATS_DESCRIPTION = f"""{CLR_RESET}{center_title(f'{CLR_BOLD}Audio Format Options{CLR_RESET}', '–')}
 
-  {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}  format=[value]
-  {CLR_BRIGHT_CYAN}Example:{CLR_CYAN} format=opus
+  {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}   format=[value]
+  {CLR_BRIGHT_CYAN}Example:{CLR_CYAN}  format=opus
 {CLR_RESET}
 • {CLR_BRIGHT_GREEN}best{CLR_RESET}   : Keep original (default, uses best available format)
 • {CLR_BRIGHT_GREEN}mp3{CLR_RESET}    : Universal, lossy
@@ -87,9 +129,7 @@ Audio format options{CLR_RESET}:
 # ---------------------------------------
 
 
-AVAILABLE_VIDEO_FORMATS_DESCRIPTION = f"""
-{CLR_RESET}{print_crossline('-')}
-Video format options{CLR_RESET}:
+AVAILABLE_VIDEO_FORMATS_DESCRIPTION = f"""{CLR_RESET}{center_title(f'{CLR_BOLD}Video Format Options{CLR_RESET}', '–')}
 
   {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}   format=[value]
   {CLR_BRIGHT_CYAN}Example:{CLR_CYAN}  format=mp4
@@ -110,12 +150,10 @@ Video format options{CLR_RESET}:
 # ---------------------------------------
 
 
-THUMB_DESCRIPTION = f"""
-{CLR_RESET}{print_crossline('-')}
-{CLR_RESET}{CLR_BOLD}Thumbnail Options{CLR_RESET}:
+THUMB_DESCRIPTION = f"""{CLR_RESET}{center_title(f'{CLR_BOLD}Thumbnail Options{CLR_RESET}', '–')}
 
-  {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}  thumbnail=[value]
-  {CLR_BRIGHT_CYAN}Example:{CLR_CYAN} thumbnail=false
+  {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}   thumbnail=[value]
+  {CLR_BRIGHT_CYAN}Example:{CLR_CYAN}  thumbnail=false
 {CLR_RESET}
 • {CLR_BRIGHT_GREEN}True{CLR_RESET}  : Enable thumbnail embedding (default). The thumbnail will be downloaded and embedded into the video/audio file. Default extension: jpg
 • {CLR_BRIGHT_GREEN}False{CLR_RESET} : Disable thumbnail embedding completely."""
@@ -158,12 +196,10 @@ VIDEO_THUMB_DESCRIPTION = f"""
 # ---------------------------------------
 
 
-METADATA_DESCRIPTION = f"""
-{CLR_RESET}{print_crossline('-')}
-Metadata options{CLR_RESET}:
+METADATA_DESCRIPTION = f"""{CLR_RESET}{center_title(f'{CLR_BOLD}Metadata Options{CLR_RESET}', '–')}
 
-  {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}  metadata=[value]
-  {CLR_BRIGHT_CYAN}Example:{CLR_CYAN} metadata=true
+  {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}   metadata=[value]
+  {CLR_BRIGHT_CYAN}Example:{CLR_CYAN}  metadata=true
 {CLR_RESET}
 • {CLR_BRIGHT_GREEN}True{CLR_RESET}  : Embed metadata (title, artist, albums, etc). Enabled by default for supported formats.
 • {CLR_BRIGHT_GREEN}False{CLR_RESET} : Do not embed metadata."""
@@ -175,7 +211,7 @@ AUDIO_METADATA_DESCRIPTION = f"""
 
 {CLR_BOLD}Notes on compatibility:{CLR_RESET}
 - Most formats like {CLR_GREEN}mp3, m4a, flac{CLR_RESET} fully support metadata embedding.
-- Some formats such as {CLR_YELLOW}opus, aac, wav{CLR_RESET} have limited or no reliable metadata support. Metadata may fail to embed or may be ignored by players.
+- Some formats such as {CLR_YELLOW}aac, wav{CLR_RESET} have limited or no reliable metadata support. Metadata may fail to embed or may be ignored by players.
 - For maximum compatibility across players, use {CLR_GREEN}mp3{CLR_RESET} or {CLR_GREEN}m4a{CLR_RESET}.
 
 {CLR_WARNING}Warning:{CLR_RESET} Enabling metadata for unsupported formats will not stop the download, but the tags may be missing in the final file.
@@ -198,9 +234,7 @@ VIDEO_METADATA_DESCRIPTION = f"""
 # ---------------------------------------
 
 
-SUBTITLES_DESCRIPTION = f"""
-{CLR_RESET}{print_crossline('-')}
-Subtitles options{CLR_RESET}:
+SUBTITLES_DESCRIPTION = f"""{CLR_RESET}{center_title(f'{CLR_BOLD}Subtitles Options{CLR_RESET}', '–')}
 
   {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}   subtitles=[value]
   {CLR_BRIGHT_CYAN}Example:{CLR_CYAN}  subtitles=ml

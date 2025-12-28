@@ -4,11 +4,19 @@
 #   --nightly : To set yt-dlp channel=nightly
 
 # Colors
-CLR_BLUE='\033[94m'
-CLR_RED='\033[91m'
-CLR_GREEN='\033[92m'
-CLR_YELLOW='\033[93m'
-CLR_RESET='\033[0m'
+if [ -t 1 ]; then
+  CLR_BLUE=$'\033[94m'
+  CLR_GREEN=$'\033[92m'
+  CLR_YELLOW=$'\033[93m'
+  CLR_RED=$'\033[91m'
+  CLR_RESET=$'\033[0m'
+else
+  CLR_BLUE=''
+  CLR_GREEN=''
+  CLR_YELLOW=''
+  CLR_RED=''
+  CLR_RESET=''
+fi
 
 # Python detection 
 if command -v python3 >/dev/null 2>&1; then
