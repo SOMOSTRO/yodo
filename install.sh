@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# YOLO installer and configuration script
+# YODO installer and configuration script
 
 set -e
 
@@ -20,7 +20,7 @@ fi
 
 echo -e "${CLR_BLUE}"
 echo "==============================="
-echo "        YOLO Installer"
+echo "        YODO Installer"
 echo "==============================="
 echo -e "${CLR_RESET}"
 
@@ -169,7 +169,7 @@ echo
 # --------------------------
 printf "%s\t" "${CLR_BLUE}• Compiling python files...${CLR_RESET}"
 
-python3 -m compileall -f -q yolo/
+python3 -m compileall -f -q yodo/
 
 printf "%s\n" "${CLR_GREEN}✓ done${CLR_RESET}"
 
@@ -181,7 +181,7 @@ printf "%s\t" "${CLR_BLUE}• Setting executable permissions...${CLR_RESET}"
 
 chmod +x install.sh
 chmod +x run.sh
-chmod +x yolo/updater/*.sh
+chmod +x yodo/updater/*.sh
 
 printf "%s\n" "${CLR_GREEN}✓ done${CLR_RESET}"
 
@@ -195,14 +195,14 @@ if [[ -n "$ZSH_VERSION" ]]; then
     SHELL_RC="$HOME/.zshrc"
 fi
 
-if grep -q "alias yolo=" "$SHELL_RC" 2>/dev/null; then
-    echo -e "${CLR_GREEN}Alias 'yolo' already added${CLR_RESET}"
+if grep -q "alias yodo=" "$SHELL_RC" 2>/dev/null; then
+    echo -e "${CLR_GREEN}Alias 'yodo' already added${CLR_RESET}"
 else
-    install_msg "Adding 'yolo' alias"
-    echo "alias yolo='$PROJECT_ROOT/run.sh'" >> "$SHELL_RC"
+    install_msg "Adding 'yodo' alias"
+    echo "alias yodo='$PROJECT_ROOT/run.sh'" >> "$SHELL_RC"
     echo -e "${CLR_GREEN}Alias added to $SHELL_RC${CLR_RESET}"
     source "$SHELL_RC" 2>/dev/null || true
-    echo -e "${CLR_YELLOW}If 'yolo' command doesn't work, restart your terminal.${CLR_RESET}"
+    echo -e "${CLR_YELLOW}If 'yodo' command doesn't work, restart your terminal.${CLR_RESET}"
 fi
 
 echo
@@ -216,4 +216,4 @@ echo "  Python : $(python3 --version)"
 echo "  yt-dlp : $(yt-dlp --version)"
 echo "  FFmpeg : $(ffmpeg -version | head -n 1)"
 echo
-echo -e "${CLR_GREEN}Run 'yolo' to start the program.${CLR_RESET}"
+echo -e "${CLR_GREEN}Run 'yodo' to start the program.${CLR_RESET}"

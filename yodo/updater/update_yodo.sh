@@ -7,16 +7,16 @@ info() { echo -e "[\e[34mINFO\e[0m] $1"; }
 warn() { echo -e "[\e[33mWARN\e[0m] $1"; }
 fail() { echo -e "[\e[31mFAIL\e[0m] $1"; exit 1; }
 
-# updater/ → yolo/ → repo root
+# updater/ → yodo/ → repo root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-YOLO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+YODO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-cd "$YOLO_ROOT" || exit 1
+cd "$YODO_ROOT" || exit 1
 
-info "Checking YOLO installation..."
+info "Checking YODO installation..."
 
 if [ ! -d ".git" ]; then
-  fail "YOLO is not installed via git, update cannot continue."
+  fail "YODO is not installed via git, update cannot continue."
   exit 1
 fi
 
@@ -24,7 +24,7 @@ info "Checking for local modifications..."
 # check if working tree is dirty
 if [ -n "$(git status --porcelain)" ]; then
   echo ""
-  warn "You have modified YOLO source files locally."
+  warn "You have modified YODO source files locally."
   warn "If you continue, all your local changes will be PERMANENTLY LOST."
   echo ""
   printf "Do you want to continue updating? (y/n): "
@@ -36,7 +36,7 @@ if [ -n "$(git status --porcelain)" ]; then
   fi
   
   # Backup local changes
-  backup="$HOME/yolo_local_changes_$(date +%Y%m%d_%H%M%S).patch"
+  backup="$HOME/yodo_local_changes_$(date +%Y%m%d_%H%M%S).patch"
   info "Backing up user changes to '$backup'"
   git diff > "$backup"
 else
@@ -52,4 +52,4 @@ info "Forcing updates..."
 git reset --hard origin/main # overwrite all local changes
 git clean -fd # deletes untracked files&folders
 
-ok "YOLO update completed"
+ok "YODO update completed"

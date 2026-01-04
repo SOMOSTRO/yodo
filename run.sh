@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# YOLO launcher script
+# YODO launcher script
 
 # Resolve script's real location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,7 +15,7 @@ fi
 
 # Change to project root
 cd "$SCRIPT_DIR" || {
-  echo -e "${CLR_RED}Failed to change directory to YOLO project root.${CLR_RESET}"
+  echo -e "${CLR_RED}Failed to change directory to YODO project root.${CLR_RESET}"
   exit 1
 }
 
@@ -31,7 +31,7 @@ else
 fi
 
 # Clear terminal screen
-clear
+# clear
 
-# Run YOLO as a module
-exec "$PY" -m yolo.main "$@"
+# Run YODO as a module
+exec "$PY" -m yodo.main "$@"

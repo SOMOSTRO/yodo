@@ -1,6 +1,6 @@
 import shutil
-from yolo.utils.colors import *
-from yolo.utils.terminal_utils import print_crossline, center_title
+from yodo.utils.colors import *
+from yodo.utils.terminal_utils import print_crossline, center_title
 
 # ---------------------------------------
 

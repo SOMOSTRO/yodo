@@ -9,8 +9,8 @@ import time
 # benchmark for debugging
 start = time.perf_counter()
 
-# YOLO built-in modules/functions
-from yolo.utils.colors import * # import required on top level
+# YODO built-in modules/functions
+from yodo.utils.colors import * # import required on top level
 
 # set environment variables
 os.environ["YTDLP_REMOTE_COMPONENTS"] = "ejs:github"
@@ -34,23 +34,25 @@ FINAL_EXT = None
 
 # function to print program banner/logo
 def PRINT_LOGO():
-  """Print YOLO banner"""
+  """Print YODO banner"""
   
-  # YOLO version
-  version = "1.1.7"
+  # YODO version
+  version = "1.1.8"
   
-  _1 = f'\033[38;2;204;153;153m' # Magenta
-  _2 = f'\033[38;2;204;153;204m' # Lilac
-  _3 = f'\033[38;2;204;153;255m' # Teal
-  _4 = f'\033[38;2;204;102;255m' # Lime
-  _5 = f'\033[38;2;204;102;204m' # Sea
+  _1 = '\033[38;2;255;153;204m'  # Pink
+  _2 = '\033[38;2;230;153;230m'  # Soft Violet
+  _3 = '\033[38;2;204;153;255m'  # Violet
+  _4 = '\033[38;2;153;153;255m'  # Periwinkle
+  _5 = '\033[38;2;153;204;255m'  # Sky Blue
+  _6 = '\033[38;2;153;220;255m'  # Soft Cyan
   
   print(fr"""{CLR_BOLD}
-  {_1}  ___  _ ____  _     ____ 
-  {_2}  \  \///  _ \/ \   /  _ \
-  {_3}   \  / | / \|| |   | / \|
-  {_4}   / /  | \_/|| |_/\| \_/|
-  {_5}  /_/   \____/\____/\____/ {CLR_RESET}Version: {version}
+  {_1}__     __ ____   _____    ____  
+  {_2}\ \   / // __ \ |  __ \  / __ \ 
+  {_3} \ \_/ /| |  | || |  | || |  | |
+  {_4}  \   / | |  | || |  | || |  | |
+  {_5}   | |  | |__| || |__| || |__| |
+  {_6}   |_|   \____/ |_____/  \____/  {CLR_RESET}Version: {version}
   """)
 
 # print_space
@@ -194,10 +196,10 @@ def init():
     "yt_dlp.extractor",
     "yt_dlp.extractor.common",
     "yt_dlp.extractor.youtube",
-    "yolo.updater.update_handler",
-    "yolo.utils.yolo_documentation",
-    "yolo.utils.prompt_validator",
-    "yolo.utils.terminal_utils"
+    "yodo.updater.update_handler",
+    "yodo.utils.yodo_documentation",
+    "yodo.utils.prompt_validator",
+    "yodo.utils.terminal_utils"
   )
   
   def preload_modules():
@@ -219,7 +221,7 @@ def init():
     if arg in ("--debug", "-d"):
       DEBUG = True
     else:
-      print(f"{CLR_ERROR}Unknown argument: '{arg}'. Usage: yolo [--debug | -d]{CLR_RESET}")
+      print(f"{CLR_ERROR}Unknown argument: '{arg}'. Usage: yodo [--debug | -d]{CLR_RESET}")
       
   # print(f"{CLR_DIM}Preload execution time: {(time.perf_counter()-start)*1000:.2f} ms{CLR_RESET}")
       
@@ -268,14 +270,14 @@ def url_input_handler():
     return None
     
   # Intro message
-  print(f"{CLR_BRIGHT_GREEN}YOLO — Universal Media Downloader{CLR_RESET}")
-  print(f"{CLR_BRIGHT_GREEN}Github: https://github.com/somostro/yolo{CLR_RESET}\n")
+  print(f"{CLR_BRIGHT_GREEN}YODO — Universal Media Downloader{CLR_RESET}")
+  print(f"{CLR_BRIGHT_GREEN}Github: https://github.com/somostro/yodo{CLR_RESET}\n")
   
   print(f"{CLR_ITALIC}Download videos and audio from supported websites using a simple, interactive interface.\n{CLR_RESET}")
   
   print(f"{CLR_GREEN}How to use:{CLR_RESET}")
   print(f"{CLR_BOLD}  • Paste a media URL and press Enter to choose quality and download{CLR_RESET}")
-  print(f"  • Type '{CLR_CYAN}update{CLR_RESET}' to update YOLO and yt-dlp to the latest version")
+  print(f"  • Type '{CLR_CYAN}update{CLR_RESET}' to update YODO and yt-dlp to the latest version")
   print(f"  • Type '{CLR_CYAN}cancel{CLR_RESET}' to exit the program at any time\n")
   
   while True:
@@ -288,11 +290,11 @@ def url_input_handler():
     except NameError:
       from urllib.parse import urlparse
       
-    # import YOLO updater.update_handler
+    # import YODO updater.update_handler
     try:
       update_handler
     except NameError:
-      from yolo.updater import update_handler
+      from yodo.updater import update_handler
       
     # update command handler
     if user_input.lower().startswith("update"):
@@ -979,40 +981,37 @@ def choice_input_handler(options_file_size, options_details):
     {CLR_ITALIC}Enter 'cancel' to cancel the operation{CLR_RESET}
       """)
       continue
+    
     if user_input == 'cancel':
       print("\nExiting...")
       sys.exit()
     
     choice = user_input.split(" ", 1)[0]
     set_FINAL_FILENAME(choice)
+    
+    # if choice is available
     if options_file_size[choice] != f"{CLR_ERROR}Not available{CLR_RESET}":
+      # receive confirmation message
       ok, error_msg = opt_attr_handler(user_input)
+      
       if DEBUG:
         print("options_attributes:", options_attributes)
+      
+      # print error message
       if not ok:
         print(f"\n{CLR_ERROR}{error_msg}{CLR_RESET}\n")
         continue
+      
+      # stop prompting and continue further actions
       else:
-        def print_attr_details(opt):
-          if opt == "audio":
-            print(f"{p_s(2)}{CLR_ORANGE}Quality: {CLR_RESET}{options_attributes[opt]['quality']}")
-          else:
-            print(f"{p_s(2)}{CLR_ORANGE}Quality: {CLR_RESET}{choice if options_attributes[opt]['quality'] == None else 'custom ('+options_attributes[opt]['quality']+')'}")
-          print(f"{p_s(2)}{CLR_ORANGE}Format: {CLR_RESET}{options_attributes[opt]['format']}")
-          print(f"{p_s(2)}{CLR_ORANGE}Thumbnail: {CLR_RESET}{'Enabled' if options_attributes[opt]['thumbnail']['enabled'] else 'Disabled'}{(', '+CLR_ORANGE+'Extension: '+CLR_RESET+options_attributes[opt]['thumbnail']['ext']) if options_attributes[opt]['thumbnail']['enabled'] else ''}")
-          print(f"{p_s(2)}{CLR_ORANGE}Metadata: {CLR_RESET}{'Enabled' if options_attributes[opt]['metadata'] else 'Disabled'}")
-        if choice == "audio":
-          print(f"{CLR_BRIGHT_GREEN}Audio arguments details:{CLR_RESET}")
-          print_attr_details("audio")
-        else:
-          print(f"{CLR_BRIGHT_GREEN}Video arguments details:{CLR_RESET}")
-          print_attr_details("video")
-          print(f"{p_s(2)}{CLR_ORANGE}Subtitles: {CLR_RESET}{'Enabled' if options_attributes['video']['subtitles']['enabled'] else 'Disabled'}{(', '+CLR_ORANGE+'Subtitles format: '+CLR_RESET+options_attributes['video']['subtitles']['subtitlesformat']) if options_attributes['video']['subtitles']['enabled'] else ''}")
         break
+    # if choice is not available
     else:
-      print(f"""{CLR_WARNING}
-  The choice '{choice}' is not available, please choose another.{CLR_RESET}
-      """)
+      print(
+        f"{CLR_WARNING}"
+        f"The choice '{choice}' is not available. Please choose another."
+        f"{CLR_RESET}"
+      )
       continue
     
     print(f"""{CLR_ERROR}
@@ -1021,10 +1020,41 @@ def choice_input_handler(options_file_size, options_details):
     {CLR_ITALIC}Enter 'cancel' to cancel the operation{CLR_RESET}
       """)
   
+  # display processed arguments/attributes details
+  print()
+  def print_attr_details(opt):
+    # audio quality attr info
+    if opt == "audio":
+      print(f"{p_s(2)}{CLR_ORANGE}Quality: {CLR_RESET}{options_attributes[opt]['quality']}")
+    # video quality attr info
+    else:
+      print(f"{p_s(2)}{CLR_ORANGE}Quality: {CLR_RESET}{choice if options_attributes[opt]['quality'] == None else 'custom ('+options_attributes[opt]['quality']+')'}")
+    
+    # format attr info
+    print(f"{p_s(2)}{CLR_ORANGE}Format: {CLR_RESET}{options_attributes[opt]['format']}")
+    
+    # thumbnail attr info
+    print(f"{p_s(2)}{CLR_ORANGE}Thumbnail: {CLR_RESET}{'Enabled' if options_attributes[opt]['thumbnail']['enabled'] else 'Disabled'}{(', '+CLR_ORANGE+'Extension: '+CLR_RESET+options_attributes[opt]['thumbnail']['ext']) if options_attributes[opt]['thumbnail']['enabled'] else ''}")
+    
+    # metadata attr info
+    print(f"{p_s(2)}{CLR_ORANGE}Metadata: {CLR_RESET}{'Enabled' if options_attributes[opt]['metadata'] else 'Disabled'}")
+  
+  # print overview of audio attrs
+  if choice == "audio":
+    print(f"{CLR_BRIGHT_GREEN}Audio Arguments Overview:{CLR_RESET}")
+    print_attr_details("audio")
+  
+  #print overview of video attrs
+  else:
+    print(f"{CLR_BRIGHT_GREEN}Video Arguments Overview:{CLR_RESET}")
+    print_attr_details("video")
+    # subtitles attr info
+    print(f"{p_s(2)}{CLR_ORANGE}Subtitles: {CLR_RESET}{'Enabled' if options_attributes['video']['subtitles']['enabled'] else 'Disabled'}{(', '+CLR_ORANGE+'Subtitles format: '+CLR_RESET+options_attributes['video']['subtitles']['subtitlesformat']) if options_attributes['video']['subtitles']['enabled'] else ''}")
+  
   return {"choice": choice, "options_attributes": options_attributes}
 
 # main function
-def download_media(url, download_dir="/storage/emulated/0/YOLO"):
+def download_media(url, download_dir="/storage/emulated/0/YODO"):
   """
   Download media (video or audio) from a given URL using yt-dlp.
 
@@ -1035,7 +1065,7 @@ def download_media(url, download_dir="/storage/emulated/0/YOLO"):
   Args:
     url (str): Media URL to download from.
     download_dir (str, optional): Base directory for downloads.
-        Defaults to "/storage/emulated/0/YOLO".
+        Defaults to "/storage/emulated/0/YODO".
 
   Exits:
     Terminates the program if the user cancels the operation or if a critical download or postprocessing error occurs.
@@ -1345,10 +1375,10 @@ if __name__ == "__main__":
   from yt_dlp import YoutubeDL
   from yt_dlp.utils import sanitize_filename as _ytdlp_sanitize
   
-  # YOLO built-in modules/functions
-  from yolo.utils.yolo_documentation import *
-  from yolo.utils.prompt_validator import prompt_screen
-  from yolo.utils.terminal_utils import print_crossline
+  # YODO built-in modules/functions
+  from yodo.utils.yodo_documentation import *
+  from yodo.utils.prompt_validator import prompt_screen
+  from yodo.utils.terminal_utils import print_crossline
   
   # calling main download function
   download_media(url)

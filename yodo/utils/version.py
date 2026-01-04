@@ -12,7 +12,7 @@ def _version_json_data():
     return {}
 
 def get_version():
-  """Return YOLO version from version.json"""
+  """Return YODO version from version.json"""
   return _version_json_data().get("version", "unknown")
 
 

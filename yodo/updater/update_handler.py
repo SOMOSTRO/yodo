@@ -1,60 +1,60 @@
 import subprocess
 import sys
 import shlex
-from yolo.utils.colors import *
-from yolo.utils.terminal_utils import center_title, print_crossline
-from yolo.utils.version import get_version, get_channel
+from yodo.utils.colors import *
+from yodo.utils.terminal_utils import center_title, print_crossline
+from yodo.utils.version import get_version, get_channel
 
-YOLO_SCRIPT = "yolo/updater/update_yolo.sh"
-YTDLP_SCRIPT = "yolo/updater/update_ytdlp.sh"
+YODO_SCRIPT = "yodo/updater/update_yodo.sh"
+YTDLP_SCRIPT = "yodo/updater/update_ytdlp.sh"
 
 def update(command: str):
   parts = command.lower().split()
   args = parts[1:]
 
   # defaults
-  update_yolo = False
+  update_yodo = False
   update_ytdlp = False
   nightly = False
 
   # no arguments: update both (stable)
   if not args:
-    update_yolo = True
+    update_yodo = True
     update_ytdlp = True
   else:
     for arg in args:
-      if arg == "yolo":
-        update_yolo = True
+      if arg == "yodo":
+        update_yodo = True
       elif arg == "yt-dlp":
         update_ytdlp = True
       elif arg == "nightly":
         nightly = True
       else:
         print(f"{CLR_ERROR}Unknown update argument: '{arg}'{CLR_RESET}")
-        print("Usage: update [yolo] [yt-dlp] [nightly]")
+        print("Usage: update [yodo] [yt-dlp] [nightly]")
         return
 
     # if nothing specified but args exist then invalid
-    if not update_yolo and not update_ytdlp:
+    if not update_yodo and not update_ytdlp:
       print(f"{CLR_ERROR}Nothing to update.{CLR_RESET}")
-      print("Usage: update [yolo] [yt-dlp] [nightly]")
+      print("Usage: update [yodo] [yt-dlp] [nightly]")
       return
 
   # sanity checks
   if nightly and not update_ytdlp:
-    print(f"{CLR_WARNING}Note: 'nightly' applies only to yt-dlp. Ignored for YOLO.{CLR_RESET}")
+    print(f"{CLR_WARNING}Note: 'nightly' applies only to yt-dlp. Ignored for YODO.{CLR_RESET}")
 
   print(f"\n{CLR_BRIGHT_BLUE}Starting update process...{CLR_RESET}")
 
-  # update YOLO
-  if update_yolo:
-    print(center_title(f"{CLR_BRIGHT_GREEN}YOLO{CLR_RESET}"))
-    print(f"Current YOLO version: {CLR_YELLOW}{get_version()} ({get_channel()}){CLR_RESET}")
-    print(f"{CLR_BRIGHT_GREEN}• Updating YOLO...{CLR_RESET}")
+  # update YODO
+  if update_yodo:
+    print(center_title(f"{CLR_BRIGHT_GREEN}YODO{CLR_RESET}"))
+    print(f"Current YODO version: {CLR_YELLOW}{get_version()} ({get_channel()}){CLR_RESET}")
+    print(f"{CLR_BRIGHT_GREEN}• Updating YODO...{CLR_RESET}")
     
-    _run_script(YOLO_SCRIPT)
+    _run_script(YODO_SCRIPT)
     
-    print(f"Updated YOLO version: {CLR_GREEN}{get_version()} ({get_channel()}){CLR_RESET}")
+    print(f"Updated YODO version: {CLR_GREEN}{get_version()} ({get_channel()}){CLR_RESET}")
     print(print_crossline("–"))
 
   # update yt-dlp
@@ -67,7 +67,7 @@ def update(command: str):
 
   print(f"\n{CLR_BRIGHT_GREEN}Update process finished.{CLR_RESET}")
   print("Exiting...")
-  print(f"\n({CLR_BRIGHT_GREEN}Start {CLR_BOLD}yolo{CLR_RESET_BOLD} again to experience the new version...{CLR_RESET})")
+  print(f"\n({CLR_BRIGHT_GREEN}Start {CLR_BOLD}yodo{CLR_RESET_BOLD} again to experience the new version...{CLR_RESET})")
   sys.exit()
 
 
