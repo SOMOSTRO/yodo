@@ -1,36 +1,40 @@
+# Startup timer (must be first for accurate measurement)
+import time
+_perf_startup_time_start = time.perf_counter()
+
+# Standard library
 import os
 import sys
-import time
 # import re
 # import shlex
 # import importlib
 # from threading import Thread
 
-# benchmark for debugging
-_perf_startup_time_start = time.perf_counter()
-
 # YODO built-in modules/functions
-from yodo.utils.colors import * # import required on top level
+from yodo.utils.colors import *
 
 # set environment variables
 os.environ["YTDLP_REMOTE_COMPONENTS"] = "ejs:github"
 os.environ["YTDLP_JS_RUNTIME"] = "deno"
 
 
-# to go back to previous line, move up 1 line
-move_up_1_line = "\x1b[1A"
-
 # Default configuration
 DEBUG = False
 VERBOSE = False
+DEVELOPMENT_MODE = False
 DOWNLOAD_DIR = None
-VERSION = "1.2.4"
+VERSION = "1.3.0"
 
-# track playlist
-IS_PLAYLIST = False
-
-# var for tracking loader
+# var for tracking loader (used in display_fetch_loader function and fetch_details function)
 is_info_loaded = False
+
+# Global PLAYLIST dict
+PLAYLIST = {
+  "is_playlist": False,
+  "title": None,
+  "count": None,
+  "range": "1-10" # default playlist range is 1-10
+}
 
 # Global var for final filename
 FINAL_FILENAME = None
@@ -127,64 +131,74 @@ def display_fetch_loader():
       dots = 0
   print(f"{'\b'*dots + ' '*dots + '\b'*dots}{CLR_RESET}", end='\t', flush=True)
   
-def sanitize_filename(title, max_bytes=240):
+def sanitize_name(name, max_bytes=240):
   """
-  Sanitize a string for safe use as a filename.
+  Sanitize a string for safe use as a filename or foldername.
 
   This function:
   - Normalizes Unicode characters to NFKC form to fix inconsistent encodings.
-  - Replaces characters that are unsafe for filenames (e.g., / \\ : * ? " < > | #) with underscores.
+  - Replaces characters that are unsafe for filenames/foldername (e.g., / \\ : * ? " < > | #) with underscores.
   - Collapses multiple spaces into a single space and trims leading/trailing whitespace.
-  - Truncates the filename to maximum bytes to avoid filesystem limits (240 is safe for most FS, 255 - some room for extension and other FS specific characters.
+  - Handle windows reserved names that cannot be used as a filename/foldername.
+  - Truncates the filename/foldername to maximum bytes to avoid filesystem limits (240 is safe for most FS, 255 - some room for extension and other FS specific characters.
   - Applies yt-dlp's internal filename sanitization for additional safety.
 
   Args:
-      title (str): The input string to be converted into a safe filename.
-      max_bytes (int, optional): Maximum byte length of the filename. Defaults to 240.
+      name (str): The input string to be converted into a safe filename/foldername.
+      max_bytes (int, optional): Maximum byte length of the filename/foldername. Defaults to 240.
 
   Returns:
-      str: A sanitized, filesystem-safe filename string.
+      str: A sanitized, filesystem-safe filename/foldername string.
   """
   
   if DEBUG:
-    sfn_start = time.perf_counter()
+    _perf_sfn_start = time.perf_counter()
   
   # Normalize unicode
-  title = unicodedata.normalize("NFKC", title)
+  name = unicodedata.normalize("NFKC", name)
   
   # Replace unsafe filename characters
   unsafe_chars = r'[\/:*?"<>|#]'
-  title = re.sub(unsafe_chars, "_", title)
+  name = re.sub(unsafe_chars, "_", name)
   
   # Collapse multiple spaces into one
-  title = re.sub(r'\s+', ' ', title).strip()
+  name = re.sub(r'\s+', ' ', name).strip()
 
-  # Enforce max filename byte limit
-  # Encode the title to bytes
-  encoded_title = title.encode('utf-8')
+  # Handle Windows Reserved Names
+  reserved_names = {
+    "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5",
+    "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5",
+    "LPT6", "LPT7", "LPT8", "LPT9"
+  }
+  if name.upper() in reserved_names:
+    name += "_"
+
+  # Enforce max name byte limit
+  # Encode the name to bytes
+  encoded_name = name.encode('utf-8')
   
   # Truncate the byte array
-  if len(encoded_title) > max_bytes:
-    truncated_bytes = encoded_title[:max_bytes]
+  if len(encoded_name) > max_bytes:
+    truncated_bytes = encoded_name[:max_bytes]
     
     # Decode truncated bytes (skip any incomplete multi-byte sequence at the end)
-    title = truncated_bytes.decode('utf-8', errors='ignore')
+    name = truncated_bytes.decode('utf-8', errors='ignore')
     
   # Remove trailing "." (dots), " " (whitespaces) and "_" (underscores)
-  title = title.strip("._ ")
+  name = name.strip("._ ")
   
-  # Return placeholder if title is empty
-  if not title: return "media"
+  # Return placeholder if name is empty
+  if not name: return "unnamed"
   
   # Using yt_dlp sanitize_filename function
-  title = _ytdlp_sanitize(title)
+  name = _ytdlp_sanitize(name)
   
   if DEBUG:
-    log_debug(f"sanitized filename: {title}")
-    log_timing("Filename sanitization", (time.perf_counter()-sfn_start))
+    log_debug(f"sanitized filename/foldername: {name}")
+    log_timing("name sanitization", (time.perf_counter()-_perf_sfn_start))
   
-  # return sanitized file name
-  return title
+  # return sanitized filename/foldername
+  return name
 
 def resolve_download_dir(cli_dir = None):
   """
@@ -290,6 +304,7 @@ def ensure_dir_exists(download_dir):
       f"Reason: {e.strerror}"
     )
 
+
 # initialisation function.
 def init():
   """
@@ -297,6 +312,7 @@ def init():
 
   • Parses command-line arguments
   • Starts a daemon thread to lazily preload required modules
+  • Load environment variables (development mode only)
   • Exposes the Thread class globally
 
   Returns:
@@ -311,11 +327,11 @@ def init():
     # Parse command line arguments
     from yodo.cli import parse_cli_args
     
-    #_start = time.perf_counter()
+    #_perf_start = time.perf_counter()
     
     args = parse_cli_args(VERSION)
     
-    #log_timing("parse cli arguments", (time.perf_counter()-_start))
+    #log_timing("parse cli arguments", (time.perf_counter()-_perf_start))
     
     DEBUG = args.debug
     VERBOSE = args.verbose
@@ -366,7 +382,12 @@ def init():
   preload_modules_thread = Thread(target=preload_modules, daemon=True)
   preload_modules_thread.start()
   
-  # print(f"{CLR_DIM}Preload execution time: {(time.perf_counter()-start)*1000:.2f} ms{CLR_RESET}")
+  # log_timing("Preload execution time", time.perf_counter - _perf_start)
+  
+  # Load environment variables (only in development mode)
+  if DEVELOPMENT_MODE:
+    from dotenv import load_dotenv
+    load_dotenv()
       
   return preload_modules_thread
 
@@ -457,9 +478,6 @@ def url_input_handler():
     if "www.instagram.com/reels/audio" in user_input:
       print(f"{CLR_ERROR}Instagram audio files cannot be downloaded.{CLR_RESET}\n")
       continue
-    if "/playlist" in user_input:
-      print(f"{CLR_ERROR}Downloading playlists is not currently supported, this feature will be added soon.{CLR_RESET}\n")
-      continue
     
     # validate URL
     error = validate_url(user_input)
@@ -508,6 +526,7 @@ def fetch_details(url, options):
     INFO_YDL_OPTS = {
       "verbose": VERBOSE,
       "quiet": not VERBOSE,
+      "extract_flat": "in_playlist", # get playlist info
       "skip_download": True,
       "no_warnings": not DEBUG,
       "remote_components": {"ejs:github"},
@@ -540,107 +559,125 @@ def fetch_details(url, options):
         # reset color styles for output in debug mode
         log_timing("Fetch metadata", (time.perf_counter() - info_load_time))
       
-      # get video information and print
-      formats = info.get("formats", None)
-      title = info.get("title", "unknown title")
-      duration_seconds = info.get("duration", 0)
-      duration_str = time.strftime("%H:%M:%S", time.gmtime(duration_seconds))
-      
-      C_START = CLR_BRIGHT_GREEN
-      C_RESET = CLR_LIME
-      print(f"\n{p_s(2)}{C_START}video Title: {C_RESET}{title}\n{p_s(2)}{C_START}Duration: {C_RESET}{duration_str}{CLR_RESET}\n")
-      
-      # check if the input video url is Invalid(Instagram post) or not
-      if duration_str == "00:00:00":
-        print(f"{CLR_ERROR}There is no video in this URL, Posts or Images cannot be downloaded.{CLR_RESET}\nExiting...")
-        sys.exit(1)
-  
-      # set the base name of the file
-      global FINAL_FILENAME
-      FINAL_FILENAME = sanitize_filename(title)
-      
-      # 'None' for invalid value
-      invalid_value = f"{CLR_ERROR}None{CLR_RESET}"
-      
-      # debugging for loop timing
-      if DEBUG:
-        for_start = time.perf_counter()
-      
-      
-      for label, fmt in options.items():
-        try:
-          # Resolve which format yt-dlp would pick
-          selector = ydl.build_format_selector(fmt)
-          chosen = list(selector(info))
-          
-          if DEBUG:
-            _chosen_formats = [f.get("format_id") for f in chosen]
-            if _chosen_formats:
-              log_debug(label, "chosen formats:", _chosen_formats)
+      # Check if its a playlist
+      if info.get("_type") == "playlist":
+        PLAYLIST["is_playlist"] = True
+        
+        # Get playlist information and print
+        playlist_title = info.get("title") or info.get("playlist_title")
+        playlist_count = info.get('playlist_count') or len(info.get('entries', []))
+        
+        print(
+          "\n"
+          f"  {CLR_BRIGHT_GREEN}Playlist Title: {CLR_LIME}{playlist_title}\n"
+          f"  {CLR_BRIGHT_GREEN}Total Items: {CLR_LIME}{playlist_count}\n"
+        )
+        
+        PLAYLIST["title"] = sanitize_name(playlist_title) # playlist_title will be used as folder name
+        PLAYLIST["count"] = playlist_count
+        
+      else:
+        # get video information and print
+        formats = info.get("formats", None)
+        title = info.get("title", "unknown title")
+        duration_seconds = info.get("duration", 0)
+        duration_str = time.strftime("%H:%M:%S", time.gmtime(duration_seconds))
+        
+        C_START = CLR_BRIGHT_GREEN
+        C_RESET = CLR_LIME
+        print(f"\n{p_s(2)}{C_START}Media Title: {C_RESET}{title}\n{p_s(2)}{C_START}Duration: {C_RESET}{duration_str}{CLR_RESET}\n")
+        
+        # check if the input media is valid or not (Invalid: Instagram post)
+        if duration_str == "00:00:00":
+          print(f"{CLR_ERROR}There is no video in this URL. Posts or Images cannot be downloaded.{CLR_RESET}\nExiting...")
+          sys.exit(1)
+    
+        # set the base name of the file
+        global FINAL_FILENAME
+        FINAL_FILENAME = sanitize_name(title)
+        
+        # 'None' for invalid value
+        invalid_value = f"{CLR_ERROR}None{CLR_RESET}"
+        
+        # debugging for loop timing
+        if DEBUG:
+          _perf_for_start = time.perf_counter()
+        
+        
+        for label, fmt in options.items():
+          try:
+            # Resolve which format yt-dlp would pick
+            selector = ydl.build_format_selector(fmt)
+            chosen = list(selector(info))
+            
+            if DEBUG:
+              _chosen_formats = [f.get("format_id") for f in chosen]
+              if _chosen_formats:
+                log_debug(label, "chosen formats:", _chosen_formats)
+              else:
+                log_debug("No valid formats found for option:", label)
+            
+            if not chosen:
+              options_file_size[label] = f"{CLR_ERROR}Not Available{CLR_RESET}"
+              continue
+    
+            total_size = 0
+            part_sizes = []
+            first_f = chosen[0] # first format for video info reference
+            
+            # collect necessary details
+            # video details
+            resolution = f"{first_f.get('width', '?')}x{first_f.get('height', '?')}"
+            fps = first_f.get("fps") if first_f.get("fps") and first_f.get("fps") != "None" else invalid_value
+            vbr = f"{first_f.get('vbr'):.1f}" if first_f.get("vbr") else invalid_value # video bitrate in kbps
+            ext = first_f.get("ext", invalid_value)  # video extension
+            
+            # audio details
+            acodec = first_f.get("acodec", invalid_value)  # audio codec "mp4a.40.2" (AAC), "opus"
+            abr = f"{first_f.get('abr'):.1f}" if first_f.get("abr") else invalid_value # audio bitrate in kbps
+            channels = first_f.get("audio_channels", invalid_value)  # 1=mono, 2=stereo
+            channels_str = "mono" if channels == 1 else "stereo" if channels == 2 else invalid_value
+            
+            # iterate over the format to calculate file sizes
+            for f in chosen:   
+              # get file size information
+              size = f.get("filesize") or f.get("filesize_approx") or 0 
+              total_size += size
+              part_sizes.append(get_size_str(size))
+            #💥
+            # store the details into options_details dict
+            # video details
+            options_details[label]['video'] = {
+              "Resolution": resolution,
+              "FPS": fps,
+              "video Bitrate": vbr,
+              "video Extension": ext
+            }
+            
+            # audio details
+            options_details[label]['audio'] = {
+              "Audio codec": acodec,
+              "Audio Bitrate": abr,
+              "Channels": channels_str
+            }
+            
+            # store the file size info into options_file_size dict 
+            size_str = get_size_str(total_size) if total_size else "Unknown"
+            if not part_sizes:
+              options_file_size[label] = None
+            elif len(part_sizes) == 1:
+              options_file_size[label] = part_sizes[0]
             else:
-              log_debug("No valid formats found for option:", label)
-          
-          if not chosen:
+              options_file_size[label] = f"{size_str} ({' + '.join(part_sizes)})"
+          except Exception as e:
+            if DEBUG:
+              log_debug(f"Skipping incomplete formats for '{label}'")
             options_file_size[label] = f"{CLR_ERROR}Not Available{CLR_RESET}"
-            continue
-  
-          total_size = 0
-          part_sizes = []
-          first_f = chosen[0] # first format for video info reference
-          
-          # collect necessary details
-          # video details
-          resolution = f"{first_f.get('width', '?')}x{first_f.get('height', '?')}"
-          fps = first_f.get("fps") if first_f.get("fps") and first_f.get("fps") != "None" else invalid_value
-          vbr = f"{first_f.get('vbr'):.1f}" if first_f.get("vbr") else invalid_value # video bitrate in kbps
-          ext = first_f.get("ext", invalid_value)  # video extension
-          
-          # audio details
-          acodec = first_f.get("acodec", invalid_value)  # audio codec "mp4a.40.2" (AAC), "opus"
-          abr = f"{first_f.get('abr'):.1f}" if first_f.get("abr") else invalid_value # audio bitrate in kbps
-          channels = first_f.get("audio_channels", invalid_value)  # 1=mono, 2=stereo
-          channels_str = "mono" if channels == 1 else "stereo" if channels == 2 else invalid_value
-          
-          # iterate over the format to calculate file sizes
-          for f in chosen:   
-            # get file size information
-            size = f.get("filesize") or f.get("filesize_approx") or 0 
-            total_size += size
-            part_sizes.append(get_size_str(size))
-          #💥
-          # store the details into options_details dict
-          # video details
-          options_details[label]['video'] = {
-            "Resolution": resolution,
-            "FPS": fps,
-            "video Bitrate": vbr,
-            "video Extension": ext
-          }
-          
-          # audio details
-          options_details[label]['audio'] = {
-            "Audio codec": acodec,
-            "Audio Bitrate": abr,
-            "Channels": channels_str
-          }
-          
-          # store the file size info into options_file_size dict 
-          size_str = get_size_str(total_size) if total_size else "Unknown"
-          if not part_sizes:
-            options_file_size[label] = None
-          elif len(part_sizes) == 1:
-            options_file_size[label] = part_sizes[0]
-          else:
-            options_file_size[label] = f"{size_str} ({' + '.join(part_sizes)})"
-        except Exception as e:
-          if DEBUG:
-            log_debug(f"Skipping incomplete formats for '{label}'")
-          options_file_size[label] = f"{CLR_ERROR}Not Available{CLR_RESET}"
-      
-      # debugging
-      if DEBUG:
-        log_timing("Format selection loop", (time.perf_counter()-for_start))
-      
+        
+        # debugging
+        if DEBUG:
+          log_timing("Format selection loop", (time.perf_counter()-_perf_for_start))
+        
   except Exception as e:
     error = str(e).lower()
     print("\n", center_title(f"{CLR_ERROR}Exception{CLR_RESET}"), sep='')
@@ -689,7 +726,7 @@ def choice_input_handler(options_file_size, options_details):
       "quality": None, # if not specified default value will be used
       "format": "mp4", # default
       "thumbnail": {"enabled": True, "ext": 'jpg'}, # default True, jpg
-      "metadata": True, # default True, except for 'webm'
+      "metadata": True, # default True, except for unsupported formats (webm)
       "subtitles": {
         "enabled": False,
         "lang": 'all',
@@ -712,6 +749,14 @@ def choice_input_handler(options_file_size, options_details):
     The function may reset the FINAL_FILENAME Extension if user requested (options_attributes.audio/video.format)
     The function estimates the final file name based on properties such as the video title and the chosen or predicted video/audio extension. So, the FINAL_FILENAME is only an estimate and may not be completely accurate.
     """
+    
+    global FINAL_FILENAME, FINAL_TITLE, FINAL_EXT
+    
+    # Skip setting FINAL_FILENAME if media is a playlist
+    if PLAYLIST["is_playlist"]:
+      FINAL_FILENAME = FINAL_TITLE = FINAL_EXT = "" # reset to empty string
+      return
+    
     # reset the prefix and the extension of FINAL_FILENAME if given
     def normalise_name(name):
       """function for removing the file extension from the file name"""
@@ -732,10 +777,8 @@ def choice_input_handler(options_file_size, options_details):
       elif ext == "best":
         ext = options_details[choice]['video']['video Extension']
     
-    global FINAL_TITLE
-    global FINAL_EXT
+    
     FINAL_EXT = ext
-    global FINAL_FILENAME
     FINAL_TITLE = normalise_name(FINAL_FILENAME)
     FINAL_FILENAME = FINAL_TITLE
     FINAL_FILENAME = f"{FINAL_FILENAME}.{ext}"
@@ -783,6 +826,9 @@ def choice_input_handler(options_file_size, options_details):
   
   choice_description = {'low': "", 'medium': "", 'high': "", 'audio': ""}
   for choice in choice_description.keys():
+    if PLAYLIST["is_playlist"]:
+      options_file_size[choice] = "Unknown"
+    
     # apply strike through style if the choice is Not Available
     _strike = CLR_STRIKETHROUGH if options_file_size[choice] == f"{CLR_ERROR}Not Available{CLR_RESET}" else ""
     if choice == 'audio':
@@ -790,7 +836,7 @@ def choice_input_handler(options_file_size, options_details):
   • {CLR_INPUT}{_strike}'{choice}'{CLR_RESET} = {CLR_ITALIC}{CLR_BOLD}high quality audio only{CLR_RESET}  ({CLR_ORANGE}Size: {CLR_RESET}{options_file_size[choice]}){f"""
       {CLR_BRIGHT_GREEN}Details of audio:
         {details_formated[choice]['audio']}{CLR_RESET}""" if details_formated[choice]['audio'] else ''} 
-      {move_up_1_line}"""
+      {MOVE_UP_1_LINE}"""
     else:
       choice_description[choice] = f"""
   • {CLR_INPUT}{_strike}'{choice}'{CLR_RESET} = {CLR_ITALIC}{CLR_BOLD}{choice} quality audio and video{CLR_RESET}  ({CLR_ORANGE}Size: {CLR_RESET}{options_file_size[choice]}){f"""
@@ -798,7 +844,7 @@ def choice_input_handler(options_file_size, options_details):
         {details_formated[choice]['video']}
       {CLR_BRIGHT_GREEN}Details of audio:
         {details_formated[choice]['audio']}{CLR_RESET}""" if details_formated[choice]['video'] else ''}
-      {move_up_1_line}"""
+      {MOVE_UP_1_LINE}"""
   
   print(f"""{CLR_BRIGHT_GREEN}{CLR_BOLD}choose an option from the list:{CLR_RESET}
   {choice_description['low']}
@@ -810,9 +856,13 @@ def choice_input_handler(options_file_size, options_details):
   
   # Check available choices
   _available_choices = []
-  for _choice in ('low', 'medium', 'high', 'audio'):
-    if details_formated[_choice]['audio']:
-      _available_choices.append(_choice)
+  if PLAYLIST["is_playlist"]:
+    _available_choices = ['low', 'medium', 'high', 'audio']
+  else:
+    for _choice in ('low', 'medium', 'high', 'audio'):
+      if details_formated[_choice]['audio']:
+        _available_choices.append(_choice)
+  
 
   # Guide user to select a available choice and optional arguments/attributes
   print(f"""{CLR_BRIGHT_GREEN}How to choose:{CLR_RESET}
@@ -836,8 +886,8 @@ def choice_input_handler(options_file_size, options_details):
       (True, None): if all validations pass
       (False, error_msg): if validation failed or an error occurred
     """
-    ALLOWED_AUDIO_ATTRS = ("quality", "format", "thumbnail", "metadata")
-    ALLOWED_VIDEO_ATTRS = ("quality", "format", "thumbnail", "metadata", "subtitles")
+    ALLOWED_AUDIO_ATTRS = ("quality", "format", "thumbnail", "metadata", "range")
+    ALLOWED_VIDEO_ATTRS = ("quality", "format", "thumbnail", "metadata", "subtitles", "range")
     
     # helper functions
     def validate_audio_quality(value):
@@ -998,10 +1048,23 @@ def choice_input_handler(options_file_size, options_details):
       elif value == 'help':
         raise ValueError(SUBTITLES_DESCRIPTION)
       raise ValueError(f"Invalid value(subtitles: '{lang}').\n{SUBTITLES_DESCRIPTION}")
+      
+    def validate_playlist_range(value):
+      value = value.strip()
+      
+      if DEBUG:
+        log_debug("playlist_range:", value)
+      
+      if value:
+        return value
+      
+      raise ValueError(f"Invalid value (range: '{value}').\n")
     
     # By default set audio format as best
     try:
-      options_attributes["audio"]["format"] = codec_to_ext(options_details[user_input.split(" ", 1)[0]]['audio']['Audio codec'])
+      # set audio format as default only if its not a playlist
+      if not PLAYLIST["is_playlist"]:
+        options_attributes["audio"]["format"] = codec_to_ext(options_details[user_input.split(" ", 1)[0]]['audio']['Audio codec'])
     except TypeError:
       options_attributes["audio"]["format"] = codec_to_ext(None) # use default
     
@@ -1077,6 +1140,12 @@ def choice_input_handler(options_file_size, options_details):
               options_attributes["audio"]["metadata"] = True
             else:
               options_attributes["audio"]["metadata"] = False
+          elif attr.startswith('range'):
+            try:
+              playlist_range = validate_playlist_range(value)
+              PLAYLIST["range"] = playlist_range
+            except ValueError as e:
+              return False, e
     
     else:
       for attr in attrs_list:
@@ -1418,25 +1487,42 @@ def download_media(url):
     }
 
   # setting download directory/path
-  if choice == "audio":
-    download_dir = os.path.join(download_dir, "audio")
+  if PLAYLIST["is_playlist"]:
+    _playlist_dir = os.path.join(download_dir, "playlist")
+    download_dir = os.path.join(_playlist_dir, PLAYLIST["title"])
     ensure_dir_exists(download_dir)
   else:
-    download_dir = os.path.join(download_dir, "video")
-    ensure_dir_exists(download_dir)
+    if choice == "audio":
+      download_dir = os.path.join(download_dir, "audio")
+      ensure_dir_exists(download_dir)
+    else:
+      download_dir = os.path.join(download_dir, "video")
+      ensure_dir_exists(download_dir)
   
   # general yt-dlp opts
   global FINAL_TITLE
   
+  # playslist specific options
+  playlist_opts = {
+    "outtmpl": os.path.join(download_dir, "%(title)s.%(ext)s"),
+    "ignoreerrors": True, # dont skip entire playlist even if some of the videos are unavailable
+    "playlist_items": PLAYLIST.get("range", "2"),
+    
+    
+  }
+  
   YDL_OPTS = {
     "format": OPTIONS[choice],
     "outtmpl": os.path.join(download_dir, f"{FINAL_TITLE}.%(ext)s"),  # Download path
-    "noplaylist": True,  # Download only single item, not whole playlist
+    "noplaylist": not PLAYLIST["is_playlist"],
     "overwrites": False,
     "concurrent_fragment_downloads": 3, # number of fragments of a video that are downloaded simultaneously
     "update_time": False, # video download date = file creation date
     "sleep_interval": 1,
     "max_sleep_interval": 5,
+    "retries": 5,
+    "fragment_retries": 5,
+    "no_part": False, # keep '.part' extension for incomplete files
     "remote_components": {"ejs:github"},
     "js_runtimes": {
         "deno": {
@@ -1446,17 +1532,22 @@ def download_media(url):
       },
     "js_runtime": "ejs",
     "verbose": VERBOSE,
-    # "extractor_args": {
-    #   "youtube": {
-    #     "player_client": ["ios", "web", "tv_embedded"],
-    #   }
-    # },
+    "extractor_args": {
+      "youtube": {
+        k: [v] for k, v in {
+          "po_token": os.getenv("YT_PO_TOKEN"),
+          "visitor_data": os.getenv("YT_VISITOR_DATA"),
+          "player_client": os.getenv("YT_PLAYER_CLIENT")
+        }.items() if v
+      }
+    },
+    **playlist_opts,
     **audio_opts,
     **video_opts
   }
 
   try:
-    _download_media_start = time.perf_counter() # to measure total download time (duration)
+    _perf_download_media_start = time.perf_counter() # to measure total download time (duration)
     # Download media
     print(center_title(f"{CLR_BRIGHT_GREEN}Download Media{CLR_RESET}"))
     with YoutubeDL(YDL_OPTS) as ydl:
@@ -1504,12 +1595,13 @@ def download_media(url):
       print(print_crossline())
       
       # get the final filename(after extraction/conversion)
-      if info:
-        final_filename = info["requested_downloads"][0]["filepath"]
-      else:
-        # fallback to dynamically set final_filename if info not available
-        global FINAL_FILENAME
-        final_filename = f"{download_dir}/{FINAL_FILENAME}"
+      if not PLAYLIST["is_playlist"]:
+        if info:
+          final_filename = info["requested_downloads"][0]["filepath"]
+        else:
+          # fallback to dynamically set final_filename if info not available
+          global FINAL_FILENAME
+          final_filename = f"{download_dir}/{FINAL_FILENAME}"
       
       # Display downloaded file information
       def get_file_location(filename):
@@ -1524,22 +1616,48 @@ def download_media(url):
         "Calculate and returns the file size of the downloaded file."
         file_size = os.path.getsize(filename)
         return f"{file_size / (1024*1024):.2f} MB"
-        
+      
+      def get_folder_size(directory):
+        "Calculate and returns the total folder size of the downloaded playlist."
+        folder_size = sum(entry.stat().st_size for entry in os.scandir(directory) if entry.is_file())
+        return f"{CLR_RESET}{get_size_str(folder_size)}"
+      
       if VERBOSE:
-        print(f"{CLR_DIM}[info] Full path: {final_filename}{CLR_RESET}")
+        if PLAYLIST["is_playlist"]:
+          print(f"{CLR_DIM}[info] Full path: {download_dir}{CLR_RESET}")
+        else:
+          print(f"{CLR_DIM}[info] Full path: {final_filename}{CLR_RESET}")
       
       if DEBUG:
-        log_timing("Time taken to download", time.perf_counter()-_download_media_start)
+        log_timing("Time taken to download", time.perf_counter()-_perf_download_media_start)
+      
+      if PLAYLIST["is_playlist"]:
+        print(
+        f"{CLR_BRIGHT_GREEN}Playlist downloaded successfully{CLR_RESET}\n"
         
-      print(
-        f"{CLR_BRIGHT_GREEN}Downloaded successfully{CLR_RESET}\n"
         # Location
-        f"  {CLR_GREEN}Location: {CLR_LIME}{get_file_location(final_filename)}\n"
-        # Filename
-        f"  {CLR_GREEN}File: {CLR_LIME}{format_filename(final_filename)}\n"
-        # File size
-        f"  {CLR_GREEN}Size: {CLR_LIME}{get_file_size(final_filename)}{CLR_RESET}"
+        f"  {CLR_GREEN}Location: {CLR_LIME}{download_dir}\n"
+        
+        # Playlist Title
+        f"  {CLR_GREEN}Title: {CLR_LIME}{PLAYLIST["title"]}\n"
+        
+        # Playlist/folder size
+        f"  {CLR_GREEN}Folder Size: {get_folder_size(download_dir)}"
       )
+      
+      else:
+        print(
+          f"{CLR_BRIGHT_GREEN}Downloaded successfully{CLR_RESET}\n"
+          
+          # Location
+          f"  {CLR_GREEN}Location: {CLR_LIME}{get_file_location(final_filename)}\n"
+          
+          # Filename
+          f"  {CLR_GREEN}File: {CLR_LIME}{format_filename(final_filename)}\n"
+          
+          # File size
+          f"  {CLR_GREEN}Size: {CLR_LIME}{get_file_size(final_filename)}{CLR_RESET}"
+        )
   except Exception as e:
     print(center_title(f"{CLR_ERROR}Exception{CLR_RESET}"))
     error = str(e).lower()

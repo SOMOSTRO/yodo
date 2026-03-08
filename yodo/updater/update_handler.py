@@ -8,6 +8,9 @@ from yodo.utils.version import get_version, get_channel
 YODO_SCRIPT = "yodo/updater/update_yodo.sh"
 YTDLP_SCRIPT = "yodo/updater/update_ytdlp.sh"
 
+# Track whether updater scripts executed successfully or not
+error_occurred = False
+
 def update(command="update"):
   parts = command.lower().split()
   args = parts[1:]
@@ -67,8 +70,13 @@ def update(command="update"):
     print(print_crossline())
     print()
 
-  print(f"{CLR_BRIGHT_GREEN}Update process finished.{CLR_RESET}")
-  print(f"{CLR_BRIGHT_GREEN}Start {CLR_BOLD}yodo{CLR_RESET_BOLD} again to experience the new version.{CLR_RESET}\n")
+  if not error_occurred:
+    print(f"{CLR_BRIGHT_GREEN}Update process finished.{CLR_RESET}")
+    print(f"{CLR_BRIGHT_GREEN}Start {CLR_BOLD}yodo{CLR_RESET_BOLD} again to experience the new version.{CLR_RESET}\n")
+  else:
+    print(f"{CLR_ERROR}Update process finished with errors.{CLR_RESET}")
+    print("See the logs above for more information.\n")
+  
   print("Exiting...")
   sys.exit()
 
@@ -87,3 +95,5 @@ def _run_script(script_path, args=None):
     print(f"{CLR_ERROR}Update script not found: {script_path}{CLR_RESET}")
   except subprocess.CalledProcessError:
     print(f"{CLR_ERROR}Update failed while running {script_path}{CLR_RESET}")
+    global error_occurred
+    error_occurred = True

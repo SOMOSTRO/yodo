@@ -30,7 +30,7 @@ else
   exit 1
 fi
 
-# Clear terminal screen if the no of args is 0
+# Clear the terminal screen only when no CLI arguments are passed
 if [ "$#" -eq 0 ]; then
   clear
 fi

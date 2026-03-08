@@ -30,3 +30,6 @@ CLR_STRIKETHROUGH = '\033[9m'
 CLR_RESET_BOLD = '\033[22m'
 CLR_RESET_ITALIC = '\033[23m'
 CLR_RESET_STRIKE = '\033[29m'
+
+# Extras
+MOVE_UP_1_LINE = "\x1b[1A" # to go back to previous line
