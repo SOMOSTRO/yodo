@@ -16,6 +16,10 @@ _audio_format_attrs = ['format=best', 'format=opus', 'format=mp3', 'format=aac',
 # general video and audio attrs
 _metadata_attrs = ['metadata=true', 'metadata=false', 'metadata=help']
 _thumbnail_attrs = ['thumbnail=true', 'thumbnail=false', 'thumbnail=jpg', 'thumbnail=png', 'thumbnail=webp', 'thumbnail=help']
+
+# playlist attributes or arguments
+_range_attrs = ['range=all', 'range=1,2', 'range=1-10', 'range=1,5-10', 'range=help']
+
 _help_attr = "help"
 
 # placeholders that displayed on input screen
@@ -29,6 +33,7 @@ placeholder_words = {
     *_metadata_attrs,
     *_thumbnail_attrs,
     *_video_subtitles_attrs,
+    *_range_attrs,
     _help_attr
     ],
   # audio attributes or arguments
@@ -37,6 +42,7 @@ placeholder_words = {
     *_audio_format_attrs,
     *_metadata_attrs,
     *_thumbnail_attrs,
+    *_range_attrs,
     _help_attr
     ]
 }

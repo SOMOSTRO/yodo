@@ -14,10 +14,13 @@ YODO is designed for Termux and Linux systems, focusing on simplicity, reliabili
 ## Features
 
 - **Video Downloading**  
-  Download videos in various resolutions and formats with interactive quality selection.
+  Download videos in various resolutions (up to 4K/8K) and formats with interactive quality selection.
 
 - **Audio Downloading**  
-  Extract audio only (MP3, M4A, etc.) with proper metadata support.
+  Extract audio only (OPUS, M4A, MP3, etc.) with proper metadata support.
+
+- **Playlist Support**  
+  Download complete playlists with fast metadata fetching and selective range control.
 
 - **Beginner Friendly**  
   No need to memorize yt-dlp commands — YODO guides you step by step.
@@ -249,10 +252,12 @@ Set the base download directory
 > YODO/  
 ├── audio/  
 └── video/  
+└── playlist/  
 
 **Examples:**  
 - "/storage/emulated/0/YODO/audio/..."
 - "/storage/emulated/0/YODO/video/..."
+- "/storage/emulated/0/YODO/playlist/..."
 
 **Priority order:**  
 - *CLI arguments > Environment variables > Defaults*
@@ -386,6 +391,7 @@ Inside this directory, YODO automatically organizes files:
 
 - **Audio files** → `.../audio/`
 - **Video files** → `.../video/`
+- **Playlist files** → `.../playlist/`
 
 **Example paths:**
 

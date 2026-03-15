@@ -23,7 +23,7 @@ DEBUG = False
 VERBOSE = False
 DEVELOPMENT_MODE = False
 DOWNLOAD_DIR = None
-VERSION = "1.3.0"
+VERSION = "1.3.1"
 
 # var for tracking loader (used in display_fetch_loader function and fetch_details function)
 is_info_loaded = False
@@ -570,7 +570,7 @@ def fetch_details(url, options):
         print(
           "\n"
           f"  {CLR_BRIGHT_GREEN}Playlist Title: {CLR_LIME}{playlist_title}\n"
-          f"  {CLR_BRIGHT_GREEN}Total Items: {CLR_LIME}{playlist_count}\n"
+          f"  {CLR_BRIGHT_GREEN}Total Items: {CLR_LIME}{playlist_count}{CLR_RESET}\n"
         )
         
         PLAYLIST["title"] = sanitize_name(playlist_title) # playlist_title will be used as folder name
@@ -752,7 +752,7 @@ def choice_input_handler(options_file_size, options_details):
     
     global FINAL_FILENAME, FINAL_TITLE, FINAL_EXT
     
-    # Skip setting FINAL_FILENAME if media is a playlist
+    # Skip setting FINAL_FILENAME if the input is a playlist
     if PLAYLIST["is_playlist"]:
       FINAL_FILENAME = FINAL_TITLE = FINAL_EXT = "" # reset to empty string
       return
@@ -1050,21 +1050,35 @@ def choice_input_handler(options_file_size, options_details):
       raise ValueError(f"Invalid value(subtitles: '{lang}').\n{SUBTITLES_DESCRIPTION}")
       
     def validate_playlist_range(value):
+      """Validates playlist range string.
+      Acceptable range values:
+        - numbers (a)
+        - ranges (x-y)
+        - comma seperated lists (a,b,x-y)
+        - negative indices (-n)
+      """
       value = value.strip()
       
       if DEBUG:
         log_debug("playlist_range:", value)
       
-      if value:
+      if value == 'all':
+        return 'all'
+        
+      # Check for illegal characters (allow digits, commas, hyphens)
+      if re.match(r'^[0-9\-\,]+$', value):
         return value
+      elif value == 'help':
+        raise ValueError(PLAYLIST_RANGE_DESCRIPTION)
       
-      raise ValueError(f"Invalid value (range: '{value}').\n")
+      raise ValueError(f"Invalid value (range: '{value}').\n{PLAYLIST_RANGE_DESCRIPTION}")
     
     # By default set audio format as best
     try:
       # set audio format as default only if its not a playlist
       if not PLAYLIST["is_playlist"]:
-        options_attributes["audio"]["format"] = codec_to_ext(options_details[user_input.split(" ", 1)[0]]['audio']['Audio codec'])
+        _choice = user_input.split(" ", 1)[0]
+        options_attributes["audio"]["format"] = codec_to_ext(options_details[_choice]['audio']['Audio codec'])
     except TypeError:
       options_attributes["audio"]["format"] = codec_to_ext(None) # use default
     
@@ -1147,6 +1161,7 @@ def choice_input_handler(options_file_size, options_details):
             except ValueError as e:
               return False, e
     
+    # if choice is a video format
     else:
       for attr in attrs_list:
         # split key and its value
@@ -1190,6 +1205,12 @@ def choice_input_handler(options_file_size, options_details):
               is_enabled, lang = validate_subtitles(value)
               options_attributes["video"]["subtitles"]["enabled"] = is_enabled
               options_attributes["video"]["subtitles"]["lang"] = lang
+            except ValueError as e:
+              return False, e
+          elif attr.startswith('range'):
+            try:
+              playlist_range = validate_playlist_range(value)
+              PLAYLIST["range"] = playlist_range
             except ValueError as e:
               return False, e
       
@@ -1279,17 +1300,23 @@ def choice_input_handler(options_file_size, options_details):
     # metadata attr info
     print(f"{p_s(2)}{CLR_ORANGE}Metadata: {CLR_RESET}{'Enabled' if options_attributes[opt]['metadata'] else 'Disabled'}")
   
+  def print_playlist_range_attr_details():
+    if PLAYLIST["is_playlist"]:
+      print(f"{p_s(2)}{CLR_ORANGE}Playlist Range:{CLR_RESET} {PLAYLIST["range"]}")
+  
   # print overview of audio attrs
   if choice == "audio":
     print(f"{CLR_BRIGHT_GREEN}Audio Arguments Overview:{CLR_RESET}")
     print_attr_details("audio")
+    print_playlist_range_attr_details()
   
-  #print overview of video attrs
+  # print overview of video attrs
   else:
     print(f"{CLR_BRIGHT_GREEN}Video Arguments Overview:{CLR_RESET}")
     print_attr_details("video")
     # subtitles attr info
     print(f"{p_s(2)}{CLR_ORANGE}Subtitles: {CLR_RESET}{'Enabled' if options_attributes['video']['subtitles']['enabled'] else 'Disabled'}{(', '+CLR_ORANGE+'Subtitles format: '+CLR_RESET+options_attributes['video']['subtitles']['subtitlesformat']) if options_attributes['video']['subtitles']['enabled'] else ''}")
+    print_playlist_range_attr_details()
   
   return {"choice": choice, "options_attributes": options_attributes}
 
@@ -1508,7 +1535,8 @@ def download_media(url):
     "ignoreerrors": True, # dont skip entire playlist even if some of the videos are unavailable
     "playlist_items": PLAYLIST.get("range", "2"),
     
-    
+    "restrictfilenames": True, # sanitization and safety
+    "trim_file_name": 240, # Limits filename to 240 bytes/unsafe_chars
   }
   
   YDL_OPTS = {
@@ -1552,7 +1580,7 @@ def download_media(url):
     print(center_title(f"{CLR_BRIGHT_GREEN}Download Media{CLR_RESET}"))
     with YoutubeDL(YDL_OPTS) as ydl:
       # download and get info
-      info = False
+      info = dict()
       try:
         info = ydl.extract_info(url, download = True)
       except Exception as e:
@@ -1564,8 +1592,6 @@ def download_media(url):
           print(f"  • Try switching to a different network — Switch Wi-Fi to Mobile Data.")
           print(f"  • Use a trusted VPN connection to bypass region-specific restrictions.")
           print(f"  • Update yt-dlp to the latest version when an official fix is released.\n")
-          print("Exiting...")
-          sys.exit(1)
         elif "requested format is not available" in error:
           if choice == 'audio':
             video_format_msg = "Audio-only format"
@@ -1591,8 +1617,25 @@ def download_media(url):
           
         else:
           print(f"{CLR_ERROR}Error while downloading the file:\n {e}{CLR_RESET}")
+        
+        print("Exiting...")
+        sys.exit(1)
       
       print(print_crossline())
+      
+      # check if the download process is successful or not (info dict is not empty if it was successful)
+      if info is None:
+        print(f"\n{CLR_ERROR}Download Failed{CLR_RESET}")
+        print(f"  {CLR_WARNING}Reason: {CLR_RESET}YODO (yt-dlp) could not initialize the download session.")
+    
+        # Check for common environmental causes
+        print(f"\n{CLR_WARNING}Troubleshooting Checklist:{CLR_RESET}")
+        print(f"  1. {CLR_LIME}Network:{CLR_RESET} Check if you have an active internet connection.")
+        print(f"  2. {CLR_LIME}DNS:{CLR_RESET} If on Wi-Fi, try switching to Mobile Data (resolves hostname issues).")
+        print(f"  3. {CLR_LIME}URL Status:{CLR_RESET} Verify the playlist isn't private or deleted.\n")
+        
+        print("Exiting...")
+        sys.exit(1)
       
       # get the final filename(after extraction/conversion)
       if not PLAYLIST["is_playlist"]:
@@ -1605,7 +1648,7 @@ def download_media(url):
       
       # Display downloaded file information
       def get_file_location(filename):
-        "Extracts and returns the file location from a full file path."
+        """Extracts and returns the file location from a full file path."""
         return filename.rsplit("/",1)[0] + "/"
       
       def format_filename(filename):
@@ -1613,14 +1656,27 @@ def download_media(url):
         return filename.rsplit('/', 1)[1]
       
       def get_file_size(filename):
-        "Calculate and returns the file size of the downloaded file."
+        """Calculate and returns the file size of the downloaded file."""
         file_size = os.path.getsize(filename)
         return f"{file_size / (1024*1024):.2f} MB"
       
       def get_folder_size(directory):
-        "Calculate and returns the total folder size of the downloaded playlist."
+        """Calculate and returns the total folder size of the downloaded playlist."""
         folder_size = sum(entry.stat().st_size for entry in os.scandir(directory) if entry.is_file())
         return f"{CLR_RESET}{get_size_str(folder_size)}"
+        
+      # playlist specific functions
+      def get_download_status():
+        """Gather playlist download success rate and return in a formated status string"""
+        
+        # Calculate Success Rate
+        all_entries = info.get('entries', []) # info['entries'] contains the dict for each video processed
+        successful_entries = [e for e in all_entries if e is not None] # If a video failed and 'ignoreerrors' was True, the entry might be None
+        
+        success_count = len(successful_entries)
+        total_count = len(all_entries)
+        
+        return f"{success_count}/{total_count}"
       
       if VERBOSE:
         if PLAYLIST["is_playlist"]:
@@ -1632,18 +1688,34 @@ def download_media(url):
         log_timing("Time taken to download", time.perf_counter()-_perf_download_media_start)
       
       if PLAYLIST["is_playlist"]:
+        # General playlist details
         print(
         f"{CLR_BRIGHT_GREEN}Playlist downloaded successfully{CLR_RESET}\n"
-        
-        # Location
-        f"  {CLR_GREEN}Location: {CLR_LIME}{download_dir}\n"
         
         # Playlist Title
         f"  {CLR_GREEN}Title: {CLR_LIME}{PLAYLIST["title"]}\n"
         
+        # Success rate
+        f"  {CLR_GREEN}Status: {CLR_LIME}{get_download_status()} medias saved\n"
+        
+        # Location
+        f"  {CLR_GREEN}Location: {CLR_LIME}{download_dir}\n"
+        
         # Playlist/folder size
         f"  {CLR_GREEN}Folder Size: {get_folder_size(download_dir)}"
-      )
+        )
+      
+        # Verbose only playlist details
+        if VERBOSE:
+          # Get Playlist Uploader/Channel
+          uploader = info.get('uploader') or info.get('playlist_uploader') or "Unknown"
+          
+          print(f"{CLR_DIM}[info] Uploader: {uploader}{CLR_RESET}")
+          
+          # Get Description
+          description = info.get('description', 'No description available')
+          
+          print(f"{CLR_DIM}[info] Description: {description}{CLR_RESET}")
       
       else:
         print(
@@ -1658,7 +1730,7 @@ def download_media(url):
           # File size
           f"  {CLR_GREEN}Size: {CLR_LIME}{get_file_size(final_filename)}{CLR_RESET}"
         )
-  except Exception as e:
+  except ValueError as e:
     print(center_title(f"{CLR_ERROR}Exception{CLR_RESET}"))
     error = str(e).lower()
     if "no such file" in error:

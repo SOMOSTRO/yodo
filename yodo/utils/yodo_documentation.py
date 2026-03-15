@@ -36,6 +36,11 @@ ATTRS_HELP_DESCRIPTION = f"""{CLR_RESET}{center_title(f'{CLR_BOLD}Arguments Usag
         Download and embed subtitles (video only).
         Example:
           high subtitles=true
+          
+    • {CLR_BRIGHT_GREEN}range{CLR_RESET}:
+        Select specific range of items from a playlist.
+        Examples:
+          high range=1,2,5-10
   
   {CLR_BOLD}To learn more about a specific argument:{CLR_RESET}
       {CLR_CYAN}<choice> <argument>=help{CLR_RESET}
@@ -47,6 +52,7 @@ ATTRS_HELP_DESCRIPTION = f"""{CLR_RESET}{center_title(f'{CLR_BOLD}Arguments Usag
     - Arguments are optional.
     - If an argument is not specified, defaults are used.
     - {CLR_GREEN}subtitles{CLR_RESET} argument is only available for video options.
+    - {CLR_GREEN}range{CLR_RESET} argument is only available when downloading playlists.
 {CLR_RESET}{print_crossline('-')}"""
 
 
@@ -259,4 +265,50 @@ SUBTITLES_DESCRIPTION = f"""{CLR_RESET}{center_title(f'{CLR_BOLD}Subtitles Optio
 
 {CLR_WARNING}Warning:{CLR_RESET}
 Enabling subtitles for unsupported formats (like WebM) may cause errors or result in external subtitle files instead of embedding.
+{print_crossline('-')}"""
+
+# ---------------------------------------
+
+PLAYLIST_RANGE_DESCRIPTION = f"""{CLR_RESET}{center_title(f'{CLR_BOLD}Playlist Range Options{CLR_RESET}', '-')}
+
+The range argument allows selecting specific items from a playlist.
+
+  {CLR_BRIGHT_CYAN}Syntax:{CLR_CYAN}   range=[value]
+  {CLR_BRIGHT_CYAN}Example:{CLR_CYAN}  range=1,2,5-10
+{CLR_RESET}
+Accepted values:
+
+  • {CLR_BRIGHT_GREEN}Single number{CLR_RESET}
+      Downloads a specific item.
+      Example:
+        {CLR_GREEN}range=3{CLR_RESET}
+
+  • {CLR_BRIGHT_GREEN}Range (start-end){CLR_RESET}
+      Downloads items between two positions.
+      Example:
+        {CLR_GREEN}range=1-5{CLR_RESET}
+
+  • {CLR_BRIGHT_GREEN}Comma separated list{CLR_RESET}
+      Download multiple specific items.
+      Example:
+        {CLR_GREEN}range=1,4,7{CLR_RESET}
+
+  • {CLR_BRIGHT_GREEN}Mixed values{CLR_RESET}
+      Combination of numbers and ranges.
+      Example:
+        {CLR_GREEN}range=1-3,7,10-12{CLR_RESET}
+
+  • {CLR_BRIGHT_GREEN}Negative index{CLR_RESET}
+      Select items from the end of the playlist.
+      Example:
+        {CLR_GREEN}range=-1{CLR_RESET}
+
+  • {CLR_BRIGHT_GREEN}All items{CLR_RESET}
+      Download the entire playlist.
+      Example:
+        {CLR_GREEN}range=all{CLR_RESET}
+
+{CLR_WARNING}Notes:{CLR_RESET}
+  - Playlist indexing starts from 1.
+  - Negative values count from the end of the playlist.
 {print_crossline('-')}"""
