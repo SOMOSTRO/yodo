@@ -12,6 +12,7 @@ import sys
 
 # YODO built-in modules/functions
 from yodo.utils.colors import *
+from yodo.utils.colors import _no_256
 
 # set environment variables
 os.environ["YTDLP_REMOTE_COMPONENTS"] = "ejs:github"
@@ -23,7 +24,7 @@ DEBUG = False
 VERBOSE = False
 DEVELOPMENT_MODE = False
 DOWNLOAD_DIR = None
-VERSION = "1.3.1"
+VERSION = "1.3.2"
 
 # var for tracking loader (used in display_fetch_loader function and fetch_details function)
 is_info_loaded = False
@@ -33,7 +34,8 @@ PLAYLIST = {
   "is_playlist": False,
   "title": None,
   "count": None,
-  "range": "1-10" # default playlist range is 1-10
+  "range": "1-10", # default playlist range is 1-10
+  "is_range_modified": False # Track whether user has changed the default range arg value
 }
 
 # Global var for final filename
@@ -52,6 +54,10 @@ def PRINT_LOGO():
   _4 = '\033[38;2;153;153;255m'  # Periwinkle
   _5 = '\033[38;2;153;204;255m'  # Sky Blue
   _6 = '\033[38;2;153;220;255m'  # Soft Cyan
+ 
+ # Reset colors if 256 color palette not supported (_no_256: yodo.utils.colors._no_256)
+  if _no_256:
+    _1 = _2 = _3 = _4 = _5 = _6 = ''
   
   print(fr"""{CLR_BOLD}
   {_1}__     __ ____   _____    ____  
@@ -1158,6 +1164,7 @@ def choice_input_handler(options_file_size, options_details):
             try:
               playlist_range = validate_playlist_range(value)
               PLAYLIST["range"] = playlist_range
+              PLAYLIST["is_range_modified"] = True
             except ValueError as e:
               return False, e
     
@@ -1211,6 +1218,7 @@ def choice_input_handler(options_file_size, options_details):
             try:
               playlist_range = validate_playlist_range(value)
               PLAYLIST["range"] = playlist_range
+              PLAYLIST["is_range_modified"] = True
             except ValueError as e:
               return False, e
       
@@ -1225,7 +1233,11 @@ def choice_input_handler(options_file_size, options_details):
         return False, "WebM remux is not supported for this video (codec mismatch). Please choose mp4/mkv instead."
       if FINAL_EXT == 'mp4' and options_attributes["video"]["subtitles"]["enabled"]:
         print(f"{CLR_WARNING}Warning: Subtitles may not appear in some players for MP4 files. For better compatibility, use MKV format.{CLR_RESET}")
-        
+    
+    # Final playlist check
+    if not PLAYLIST["is_range_modified"]:
+      print(f"{CLR_WARNING}Warning: The {CLR_BOLD}range{CLR_RESET_BOLD} argument was not specified. Using default value: {CLR_BOLD}'{PLAYLIST['range']}'{CLR_RESET}")
+    
     # return the function if all validations pass
     return True, None
 
@@ -1670,8 +1682,8 @@ def download_media(url):
         """Gather playlist download success rate and return in a formated status string"""
         
         # Calculate Success Rate
-        all_entries = info.get('entries', []) # info['entries'] contains the dict for each video processed
-        successful_entries = [e for e in all_entries if e is not None] # If a video failed and 'ignoreerrors' was True, the entry might be None
+        all_entries = info.get('entries', [])
+        successful_entries = [e for e in all_entries if e is not None]
         
         success_count = len(successful_entries)
         total_count = len(all_entries)
@@ -1730,7 +1742,7 @@ def download_media(url):
           # File size
           f"  {CLR_GREEN}Size: {CLR_LIME}{get_file_size(final_filename)}{CLR_RESET}"
         )
-  except ValueError as e:
+  except Exception as e:
     print(center_title(f"{CLR_ERROR}Exception{CLR_RESET}"))
     error = str(e).lower()
     if "no such file" in error:
