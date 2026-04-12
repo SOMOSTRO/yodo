@@ -24,7 +24,7 @@ DEBUG = False
 VERBOSE = False
 DEVELOPMENT_MODE = False
 DOWNLOAD_DIR = None
-VERSION = "1.3.2"
+VERSION = "1.3.3"
 
 # var for tracking loader (used in display_fetch_loader function and fetch_details function)
 is_info_loaded = False
@@ -1101,12 +1101,20 @@ def choice_input_handler(options_file_size, options_details):
     # set subtitlesformat='ttxt' for mp4 format
     if FINAL_EXT == 'mp4':
       options_attributes["video"]["subtitles"]["subtitlesformat"] = "ttxt"
+      
+    def playlist_attr_usage_warn():
+      # Final playlist attributes check
+      if not PLAYLIST["is_range_modified"]:
+        print(f"\n{CLR_WARNING}Warning: The {CLR_BOLD}range{CLR_RESET_BOLD} argument was not specified. Using default value: {CLR_BOLD}'{PLAYLIST['range']}'{CLR_RESET}")
     
     # list of attributes given by user
     user_input_list = user_input.split(" ", 1)
     
     # if no attributes provided return the function
     if len(user_input_list) == 1:
+      if PLAYLIST["is_playlist"]:
+        playlist_attr_usage_warn()
+      
       return True, None
     
     choice = user_input_list[0]
@@ -1234,9 +1242,8 @@ def choice_input_handler(options_file_size, options_details):
       if FINAL_EXT == 'mp4' and options_attributes["video"]["subtitles"]["enabled"]:
         print(f"{CLR_WARNING}Warning: Subtitles may not appear in some players for MP4 files. For better compatibility, use MKV format.{CLR_RESET}")
     
-    # Final playlist check
-    if not PLAYLIST["is_range_modified"]:
-      print(f"{CLR_WARNING}Warning: The {CLR_BOLD}range{CLR_RESET_BOLD} argument was not specified. Using default value: {CLR_BOLD}'{PLAYLIST['range']}'{CLR_RESET}")
+    if PLAYLIST["is_playlist"]:
+      playlist_attr_usage_warn()
     
     # return the function if all validations pass
     return True, None
